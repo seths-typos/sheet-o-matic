@@ -4,9 +4,9 @@ import type { PageSetup } from './sheet-preview.js';
 /**
  * Page Setup: the paper the sheet prints on — its orientation, its size and
  * its margin — and whether each metric line's value is printed beside it.
- * Edits `page` in place.
+ * Edits `page` in place, calling `onChange` after each edit.
  */
-export function createPageSetupPanel(page: PageSetup): HTMLElement {
+export function createPageSetupPanel(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'block is-outlined page-setup';
 
@@ -14,35 +14,18 @@ export function createPageSetupPanel(page: PageSetup): HTMLElement {
   title.className = 'heading-h2 block-title';
   title.textContent = '2. Page Setup';
 
+  panel.append(title, createPageSetupControls(page, onChange));
+  return panel;
+}
+
+/** Page Setup's four controls alone, without the panel round them. */
+export function createPageSetupControls(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
   const controls = document.createElement('div');
   controls.className = 'page-setup-controls';
   controls.append(
-    createChoiceToggle(
-      'Orientation',
-      [
-        { value: 'landscape', label: 'Landscape' },
-        { value: 'portrait', label: 'Portrait' },
-      ],
-      page.orientation,
-      (orientation) => {
-        page.orientation = orientation;
-      },
-    ),
-  );
-
-  controls.append(
-    createMarginField(page),
-    createChoiceToggle(
-      'Paper',
-      [
-        { value: 'letter', label: 'Letter' },
-        { value: 'a4', label: 'A4' },
-      ],
-      page.size,
-      (size) => {
-        page.size = size;
-      },
-    ),
+    createOrientationToggle(page, onChange),
+    createMarginField(page, onChange),
+    createPaperToggle(page, onChange),
     createChoiceToggle(
       'Show metric values',
       [
@@ -52,12 +35,43 @@ export function createPageSetupPanel(page: PageSetup): HTMLElement {
       page.values ? 'on' : 'off',
       (shown) => {
         page.values = shown === 'on';
+        onChange();
       },
     ),
   );
+  return controls;
+}
 
-  panel.append(title, controls);
-  return panel;
+/** Orientation: landscape or portrait. */
+export function createOrientationToggle(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
+  return createChoiceToggle(
+    'Orientation',
+    [
+      { value: 'landscape', label: 'Landscape' },
+      { value: 'portrait', label: 'Portrait' },
+    ],
+    page.orientation,
+    (orientation) => {
+      page.orientation = orientation;
+      onChange();
+    },
+  );
+}
+
+/** Paper: Letter or A4. */
+export function createPaperToggle(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
+  return createChoiceToggle(
+    'Paper',
+    [
+      { value: 'letter', label: 'Letter' },
+      { value: 'a4', label: 'A4' },
+    ],
+    page.size,
+    (size) => {
+      page.size = size;
+      onChange();
+    },
+  );
 }
 
 let nextId = 0;
@@ -67,7 +81,7 @@ let nextId = 0;
  * least 0. A value that isn't one is marked and left out, the last good
  * one standing.
  */
-function createMarginField(page: PageSetup): HTMLElement {
+export function createMarginField(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
   const id = `page-margin-${nextId++}`;
 
   const control = document.createElement('div');
@@ -90,7 +104,9 @@ function createMarginField(page: PageSetup): HTMLElement {
     const value = Number(input.value);
     const valid = input.value.trim() !== '' && Number.isFinite(value) && value >= 0;
     input.setAttribute('aria-invalid', String(!valid));
-    if (valid) page.margin = value;
+    if (!valid) return;
+    page.margin = value;
+    onChange();
   });
 
   const unit = document.createElement('span');

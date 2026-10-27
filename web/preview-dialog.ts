@@ -1,4 +1,4 @@
-import { drawSheetToCanvas } from '../src/render/canvas/index.js';
+import { drawSheetFitted } from './sheet-canvas.js';
 import type { PageSetup, PreviewSheet } from './sheet-preview.js';
 
 const PAPER_NAMES: Record<PageSetup['size'], string> = { letter: 'Letter', a4: 'A4' };
@@ -22,9 +22,6 @@ export interface PreviewDialog {
   /** Slide down showing this sheet, or a message saying why there isn't one. */
   open(content: PreviewSheet | { message: string }): void;
 }
-
-/** The paper's outline width in CSS px: --border-thick. */
-const OUTLINE = 2;
 
 /**
  * The sheet as it will print, on a panel that slides down from the top of
@@ -75,31 +72,9 @@ export function createPreviewDialog(): PreviewDialog {
   /** Fit the page to the stage, drawn sharp at the screen's pixel density. */
   function draw(): void {
     if (!shown) return;
-    const { sheet, config, options, fontFamily } = shown;
-    // Room for the paper's outline, drawn outside it.
-    const room = 2 * OUTLINE;
-    const fit = Math.min(
-      (stage.clientWidth - room) / sheet.page.width,
-      (stage.clientHeight - room) / sheet.page.height,
-    );
-    const dpr = window.devicePixelRatio || 1;
-
-    // Whole device pixels, rounded down, and shown at exactly that size.
-    // The paper is filled to the page's scaled size, so a canvas rounded up
-    // would leave its last column part filled, a grey seam against the
-    // outline; one shown a fraction over would stretch that column likewise.
-    canvas.width = Math.floor(sheet.page.width * fit * dpr);
-    canvas.height = Math.floor(sheet.page.height * fit * dpr);
-    canvas.style.width = `${canvas.width / dpr}px`;
-    canvas.style.height = `${canvas.height / dpr}px`;
-
-    drawSheetToCanvas(canvas.getContext('2d')!, sheet, config, {
-      ...options,
-      fontFamily,
-      scale: fit * dpr,
-      // The page's paper colour, as the row previews show it.
-      background: getComputedStyle(dialog).getPropertyValue('--color-white').trim(),
-    });
+    // The page's paper colour, as the row previews show it.
+    const paper = getComputedStyle(dialog).getPropertyValue('--color-white').trim();
+    drawSheetFitted(canvas, { width: stage.clientWidth, height: stage.clientHeight }, shown, paper);
   }
 
   const onResize = () => draw();

@@ -3394,97 +3394,100 @@ body {
   justify-content: end;
 }
 
-/* ── Black, white, red and green ──────────────────────── */
+/* ── Workspace: the sheet in the middle of the screen ── */
 
-/* The page black and its ink white: text, rules, outlines and the
-   controls' fills. An active row's field red, Line Styles' card outlines
-   and the lit lamps green, a button yellow under the pointer, and the
-   preview's panel a dark steel. --color-black is the ink's token, blue in
-   Figma, so it is the ink that turns white here. */
-:root {
-  --color-bg: #000;
-  --color-black: var(--color-white);
-  --color-row: #d5001a;
-  /* About 6:1 on black. */
-  --color-card: #1f9e72;
-  --color-hover: #fdda7c;
-  /* The rules' steel, darkened: a step off the black page. */
-  --color-panel: #262b33;
+/* The whole window: the top bar, then the stage taking the rest, on a
+   cutting mat — the grey dotted in a fine grid, a larger dot every fifth,
+   centred on the window so the sheet sits square in it. Each dot is
+   centred in its tile, so the two grids meet at the window's centre. */
+.rows.workspace-view {
+  --mat-cell: 24px;
+  --mat-dot: rgb(from var(--color-near-black) r g b / 0.22);
+  --mat-dot-major: rgb(from var(--color-near-black) r g b / 0.35);
+
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: var(--spacers-padding-md);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle, var(--mat-dot-major) 1.75px, transparent 2.25px),
+    radial-gradient(circle, var(--mat-dot) 1px, transparent 1.5px);
+  background-size:
+    calc(var(--mat-cell) * 5) calc(var(--mat-cell) * 5),
+    var(--mat-cell) var(--mat-cell);
+  background-position: center;
 }
 
-/* What sat white on a blue fill sits black on a white one. */
-.choice {
-  --toggle-lit: #000;
+/* The middle six columns, as tall as the window leaves them. The sheet
+   is fitted inside in main.ts and centred. Sized by the layout, never by
+   the canvas in it, or the sheet would grow the stage it's fitted to. */
+.workspace-preview {
+  grid-column: 4 / span 6;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
 }
 
-/* The chosen option's lamp lit green, glowing green. */
-.choice-option:has(input:checked) > span::before {
-  background: var(--color-card);
+/* The paper with its bar over it, as wide as the paper — following it as
+   it reshapes. The bar's controls sit on its ends, along its bottom. */
+.workspace-sheet {
+  display: grid;
+  row-gap: var(--spacers-padding-sm);
+}
+
+.workspace-sheet-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--spacers-margin-lg);
+}
+
+/* The paper: its white and shadow, sized to the sheet. It changes shape
+   over 400ms when the orientation or paper does; the drawing on it hides
+   at once and fades in once it lands. The canvas is centred in it, so the
+   new drawing never sits off the paper while it's hidden. */
+.workspace-paper {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-white);
+  /* Floating over the grey, not outlined: a fairly hard light from the
+     top left casts its shadow down and to the right, softened at the
+     edge. */
   box-shadow:
-    0 0 3px 1px rgb(from var(--color-card) r g b / 0.18),
-    0 0 8px 2px rgb(from var(--color-card) r g b / 0.1);
+    0 1px 4px rgb(0 0 0 / 0.12),
+    5px 14px 18px rgb(0 0 0 / 0.2);
+  transition:
+    width 400ms cubic-bezier(0.65, 0, 0.35, 1),
+    height 400ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/* An active row a field of red, its text on white fills in the red, its
-   title white on the black notch. */
-.editor:not(.is-inactive) {
-  --ink-contrast: var(--color-row);
-  --paper: var(--color-row);
+.workspace-paper canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  margin: auto;
+  transition: opacity 200ms ease-out;
 }
 
-.editor:not(.is-inactive) .frame-title {
-  color: var(--color-white);
+.workspace-paper.is-reshaping canvas {
+  opacity: 0;
+  transition: none;
 }
 
-.line-column.frame::before {
-  background: var(--color-card);
+.workspace-paper.is-instant {
+  transition: none;
 }
 
-/* A lead button's fill is the ink, white: its label black on it. Every
-   button fills yellow under the pointer, its label black. */
-.action-button:not(.is-secondary) {
-  --label: #000;
+@media (prefers-reduced-motion: reduce) {
+  .workspace-paper,
+  .workspace-paper canvas {
+    transition: none;
+  }
 }
 
-.action-button,
-.action-button.is-secondary {
-  --fill-hover: var(--color-hover);
-  --label-hover: #000;
-}
-
-/* The preview's panel a dark steel, so it shows sliding in over the black
-   page, the sheet the brightest thing on it. What sits on it stays white. */
-.sheet-preview {
-  --paper: var(--color-panel);
-  --ink-contrast: var(--color-panel);
-}
-
-/* The veil over the page while it's open dims rather than whitens: black,
-   not the ink, which is white. */
-.sheet-preview::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
-
-/* An empty row's preview dark, the preview panel's steel, rather than the
-   sheet's white dimmed to grey: it lights up white as the row turns on. */
-.editor.is-inactive .row-preview {
-  background: var(--color-panel);
-}
-
-/* Upload Config as the preview is: white ink on the panel's dark steel,
-   over a black veil. Its error a lighter red, as the sheet's red is too
-   dark to read on the steel: about 5:1 on it. */
-.upload-dialog {
-  --ink-contrast: var(--color-panel);
-  --paper: var(--color-panel);
-
-  background: var(--paper);
-}
-
-.upload-dialog::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
-
-.upload-dialog-error {
-  color: #ff7a7a;
+.workspace-preview-message {
+  margin: 0;
+  color: var(--ink);
 }
