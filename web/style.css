@@ -3439,6 +3439,9 @@ body {
   grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
   min-height: 0;
+  /* Narrows with the window all the way: the old page's 1366px floor
+     would scroll this one across. */
+  min-width: 0;
   /* The page's card waits, and slides, past the right edge: cut off there
      rather than widening the page, which would bring scroll bars. */
   overflow-x: clip;
@@ -3509,10 +3512,53 @@ body {
 }
 
 /* The paper with its bar over it, as wide as the paper — following it as
-   it reshapes. The bar's controls sit on its ends, along its bottom. */
+   it reshapes. The bar's controls sit on its ends, along its bottom. In a
+   compact window the page slides it aside for an open card, on the cards'
+   own slide. */
 .workspace-sheet {
   display: grid;
+  /* As wide as the paper, whatever the bar would like. */
+  grid-template-columns: minmax(0, 1fr);
   row-gap: var(--spacers-padding-sm);
+  transition: translate 350ms linear(0, 0.596 18%, 0.935 38.2%, 1.005 48.2%, 1.0215 59.6%, 1);
+}
+
+/* The bar and the actions fill the paper's width without adding to it:
+   left to their own, a paper narrower than the bar's controls would be
+   set in a box as wide as they are. */
+.workspace-sheet-bar,
+.workspace-sheet-actions {
+  width: 0;
+  min-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-sheet {
+    transition: none;
+  }
+}
+
+/* A compact window — a narrow laptop's, a tablet's; also in web/main.ts,
+   as COMPACT. The stage is the window's whole width, the page keeping the
+   paper narrow enough for one card beside it; and the bar's two controls
+   stack when the paper is narrower than the pair. */
+@media (max-width: 1279px) {
+  .workspace-preview {
+    grid-column: 1 / -1;
+  }
+
+  .workspace-sheet-controls {
+    flex-wrap: wrap;
+    row-gap: var(--spacers-padding-sm);
+  }
+}
+
+/* Compact and short, a tablet on its side: the sheet at the top of the
+   stage, not its middle, so the taller side card clears the window's foot. */
+@media (max-width: 1279px) and (max-height: 860px) {
+  .workspace-preview {
+    align-items: start;
+  }
 }
 
 .workspace-sheet-bar {
@@ -4039,6 +4085,25 @@ body {
   stroke-width: 1.25;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Compact and short again: the side's buttons and its card closer
+   together, the card that much nearer the top, to clear the window's
+   foot. After the rules it changes. */
+@media (max-width: 1279px) and (max-height: 860px) {
+  .workspace-side-buttons {
+    gap: var(--spacing-2);
+  }
+
+  .workspace-side-card {
+    top: calc(2 * 32px + 2 * var(--spacing-2));
+  }
+
+  /* And the card's own controls a step closer to each other. */
+  .side-card,
+  .side-card-controls {
+    gap: var(--spacers-padding-sm);
+  }
 }
 
 /* The paper: its white and shadow, sized to the sheet. It changes shape

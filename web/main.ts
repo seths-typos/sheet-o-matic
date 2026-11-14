@@ -304,11 +304,13 @@ function slideSideIn(which: SideCard): void {
   // Put where it starts from at once, as the rows' card is: its left edge
   // at rest to the window's right edge, and a little more for its shadow.
   sideCard.style.transition = 'none';
-  const left = pageTools.getBoundingClientRect().left + sideCard.offsetLeft;
+  const left = pageTools.getBoundingClientRect().left - sheetShift().x + sideCard.offsetLeft;
   sideCard.style.setProperty('--slide', `${document.documentElement.clientWidth - left + SLIDE_PAST}px`);
   sideCard.getBoundingClientRect();
   sideCard.style.transition = '';
   sideCard.classList.add('is-open');
+  // The two cards differ in width, so in how far the sheet moves for them.
+  shiftSheet();
 }
 
 /**
@@ -316,6 +318,8 @@ function slideSideIn(which: SideCard): void {
  * this one slides in after it.
  */
 function openSide(which: SideCard): void {
+  // Room for one card only.
+  if (COMPACT.matches) closeRow();
   const wasOpen = sideOpen !== null;
   sideOpen = which;
   const turn = ++sideTurn;
@@ -345,6 +349,7 @@ function closeSide(): void {
   sideCard.inert = true;
   sideCard.classList.remove('is-open');
   markSideButtons();
+  shiftSheet();
   // Slid away, the card is emptied, so it takes no room where it waits: a
   // tall one would otherwise make a short window scroll. After the slide's
   // length, not on its end, which a hidden tab never reports.
@@ -384,6 +389,80 @@ card.inert = true;
 cardSlot.append(card);
 
 /**
+ * A window too narrow to keep room for a card on both sides of the paper:
+ * a narrow laptop's, a tablet's. There one card is open at a time, and the
+ * paper slides aside to make its room. Also in web/style.css, where the
+ * stage takes the window's whole width: change both together.
+ */
+const COMPACT = matchMedia('(max-width: 1279px)');
+
+/** The least mat between a card, or a button, and the window's edge, in px. */
+const EDGE = 12;
+
+/**
+ * The cards' widths, in px, for keeping their room before either is
+ * built: the rows' card, and the wider of the two at the side.
+ */
+const ROW_CARD_WIDTH = 204;
+const SIDE_CARD_WIDTH = 268;
+
+/**
+ * The widest the paper can be, in px. In a wide window, the stage. In a
+ * compact one, the window less the most that ever sits beside the paper:
+ * a card open on one side, and on the other only its buttons.
+ */
+function fitWidth(): number {
+  if (!COMPACT.matches) return stage.clientWidth;
+  const gutter = root ? parseFloat(getComputedStyle(root).columnGap) : 24;
+  const edit = parseFloat(sheetBox.style.getPropertyValue('--edit-width')) || 86;
+  const buttons = sideButtons.offsetWidth || 104;
+  const rowsShut = edit + gutter + EDGE;
+  const rowsOpen = ROW_CARD_WIDTH + gutter + rowsShut;
+  const sideShut = gutter + buttons + EDGE;
+  const sideOpen = gutter + SIDE_CARD_WIDTH + EDGE;
+  const beside = Math.max(rowsOpen + sideShut, rowsShut + sideOpen);
+  return Math.max(0, document.documentElement.clientWidth - beside);
+}
+
+/** How far the sheet has been slid from its place, in px: right and down are positive. */
+function sheetShift(): { x: number; y: number } {
+  const [x = 0, y = 0] = getComputedStyle(sheetBox).translate.split(' ').map(parseFloat);
+  return { x: x || 0, y: y || 0 };
+}
+
+/**
+ * Slide the sheet out of an open card's way, by as much as the card runs
+ * past the window's edge. Sideways in a compact window: right for the
+ * rows' card, left for the side's. And up, in any window too short for the
+ * side's card under its buttons, as far as the stage's top allows. Back to
+ * its place with nothing in the way.
+ */
+function shiftSheet(): void {
+  let x = 0;
+  let y = 0;
+  if (frame.parentElement === sheetBox) {
+    const moved = sheetShift();
+    const sideShown = sideOpen !== null && sideCard.childElementCount > 0;
+    if (COMPACT.matches && editing !== null) {
+      const left = cardSlot.getBoundingClientRect().left - moved.x + card.offsetLeft;
+      x = Math.max(0, EDGE - left);
+    } else if (COMPACT.matches && sideShown) {
+      const right =
+        pageTools.getBoundingClientRect().left - moved.x + sideCard.offsetLeft + sideCard.offsetWidth;
+      x = -Math.max(0, right - (document.documentElement.clientWidth - EDGE));
+    }
+    if (sideShown) {
+      const bottom =
+        pageTools.getBoundingClientRect().top - moved.y + sideCard.offsetTop + sideCard.offsetHeight;
+      const over = bottom - (document.documentElement.clientHeight - EDGE);
+      const room = sheetBox.getBoundingClientRect().top - moved.y - stage.getBoundingClientRect().top;
+      y = -Math.max(0, Math.min(room, over));
+    }
+  }
+  sheetBox.style.translate = x === 0 && y === 0 ? '' : `${x}px ${y}px`;
+}
+
+/**
  * Level with its row's Edit button, kept inside the stage; and how far left
  * it has to go to be out of the window.
  */
@@ -400,13 +479,19 @@ function placeCard(): void {
   card.style.top = `${Math.max(highest, Math.min(lowest, centred))}px`;
   // Its right edge at rest, from the window's left, and a little more for
   // its shadow.
-  card.style.setProperty('--slide', `${-(slot.left + card.offsetLeft + card.offsetWidth + 24)}px`);
+  // Measured with the sheet in the middle, where the card comes and goes.
+  card.style.setProperty(
+    '--slide',
+    `${-(slot.left - sheetShift().x + card.offsetLeft + card.offsetWidth + 24)}px`,
+  );
 }
 
 /** Open a row's metrics card; one already open moves to the new row. */
 function openRow(index: number): void {
   // With shared metrics row 1's state is every row's.
   const state = sheet.metrics === 'same' ? sheet.rows[0]! : sheet.rows[index]!;
+  // Room for one card only.
+  if (COMPACT.matches) closeSide();
   editing = index;
   card.replaceChildren(
     createRowCard({ row: index + 1, state, styles: sheet.lines, onChange: () => redraw() }),
@@ -426,6 +511,7 @@ function openRow(index: number): void {
   }
   card.classList.add('is-open');
   markRowEdits();
+  shiftSheet();
 }
 
 /** Slide the card away. Its contents stay until it is next opened. */
@@ -435,6 +521,7 @@ function closeRow(): void {
   card.inert = true;
   card.classList.remove('is-open');
   markRowEdits();
+  shiftSheet();
 }
 
 /** Each Edit button as an X while its row's card is open. */
@@ -564,9 +651,11 @@ function redraw(animate = false): void {
   const white = getComputedStyle(document.documentElement).getPropertyValue('--color-white').trim();
   // The stage's height less the bar's over the paper, the actions' under
   // it, and the gap between each and the paper.
-  const around =
-    sheetBar.offsetHeight + sheetActions.offsetHeight + 2 * parseFloat(getComputedStyle(sheetBox).rowGap);
-  drawSheetFitted(paper, { width: stage.clientWidth, height: stage.clientHeight - around }, content, white);
+  const beside = sheetBar.offsetHeight + sheetActions.offsetHeight;
+  const around = beside + 2 * parseFloat(getComputedStyle(sheetBox).rowGap);
+  // Narrowed to a compact window with both cards open: the side's stays.
+  if (COMPACT.matches && editing !== null && sideOpen !== null) closeRow();
+  drawSheetFitted(paper, { width: fitWidth(), height: stage.clientHeight - around }, content, white);
   frame.classList.remove('is-stale');
   if (message.parentElement === frame) message.remove();
   placeRowEdits(content);
@@ -582,6 +671,16 @@ function redraw(animate = false): void {
     // Laid out at the new size before the transition comes back.
     frame.getBoundingClientRect();
     frame.classList.remove('is-instant');
+    // With the sheet at its new size: where an open card now falls.
+    shiftSheet();
+    // The bar's controls stack over a paper narrower than the pair, and
+    // sit side by side again over a wider one. Either changes the height
+    // the paper was fitted to, so it is fitted again, once.
+    if (!refitting && sheetBar.offsetHeight + sheetActions.offsetHeight !== beside) {
+      refitting = true;
+      redraw();
+      refitting = false;
+    }
     return;
   }
   setReshaping(true);
@@ -591,9 +690,14 @@ function redraw(animate = false): void {
   // length, so a hidden tab, which runs no transitions, still shows it.
   const length = Math.max(...getComputedStyle(frame).transitionDuration.split(',').map(parseFloat)) * 1000;
   setTimeout(() => {
-    if (reshape === reshapes) setReshaping(false);
+    if (reshape !== reshapes) return;
+    setReshaping(false);
+    shiftSheet();
   }, length);
 }
+
+/** Set while the paper is fitted a second time, so not a third. */
+let refitting = false;
 
 /**
  * How much of the metric values' room the drawn sheet holds, 0 to 1, and
@@ -632,6 +736,9 @@ function moveValuesRoom(): void {
 
 /** A new orientation or paper: the sheet changes shape before your eyes. */
 const reshape = () => redraw(true);
+
+// Wide to compact, or back: the paper's room is worked out differently.
+COMPACT.addEventListener('change', () => redraw());
 
 // The stage's size follows the window, not the sheet, and the sheet follows it.
 let stageSize = '';
