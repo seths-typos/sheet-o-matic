@@ -11,7 +11,7 @@ import { createPageCard } from './page-card.js';
 import { createRowCard } from './row-card.js';
 import { copyRowState, newRowState, rowInput, rowValues } from './row-input.js';
 import { MAX_ROWS, createChoiceToggle, createRowCountTabs } from './sheet-controls.js';
-import { drawSheetFitted } from './sheet-canvas.js';
+import { OUTLINE, drawSheetFitted } from './sheet-canvas.js';
 import type { RowMetrics, SheetState } from './sheet-file.js';
 import { defaultPageSetup, previewSheet, type PreviewSheet } from './sheet-preview.js';
 import { createUploadDialog } from './upload-dialog.js';
@@ -404,24 +404,39 @@ const EDGE = 12;
  * built: the rows' card, and the wider of the two at the side.
  */
 const ROW_CARD_WIDTH = 204;
-const SIDE_CARD_WIDTH = 268;
+const SIDE_CARD_WIDTH = 265;
 
-/**
- * The widest the paper can be, in px. In a wide window, the stage. In a
- * compact one, the window less the most that ever sits beside the paper:
- * a card open on one side, and on the other only its buttons.
- */
-function fitWidth(): number {
-  if (!COMPACT.matches) return stage.clientWidth;
+/** The room each side's furniture takes beside the paper, shut and open, in px. */
+function besideRooms(): { rowsShut: number; rowsOpen: number; sideShut: number; sideOpen: number } {
   const gutter = root ? parseFloat(getComputedStyle(root).columnGap) : 24;
   const edit = parseFloat(sheetBox.style.getPropertyValue('--edit-width')) || 86;
+  const close = parseFloat(sheetBox.style.getPropertyValue('--close-width')) || 70;
   const buttons = sideButtons.offsetWidth || 104;
   const rowsShut = edit + gutter + EDGE;
-  const rowsOpen = ROW_CARD_WIDTH + gutter + rowsShut;
-  const sideShut = gutter + buttons + EDGE;
-  const sideOpen = gutter + SIDE_CARD_WIDTH + EDGE;
-  const beside = Math.max(rowsOpen + sideShut, rowsShut + sideOpen);
-  return Math.max(0, document.documentElement.clientWidth - beside);
+  return {
+    rowsShut,
+    // The card a gutter from its row's button, which reads Close: the
+    // narrower word, about the middle the wider one keeps.
+    rowsOpen: ROW_CARD_WIDTH + gutter + (close - edit) / 2 + rowsShut,
+    sideShut: gutter + buttons + EDGE,
+    sideOpen: gutter + SIDE_CARD_WIDTH + EDGE,
+  };
+}
+
+/**
+ * The widest the paper can be, in px: the window less what sits beside
+ * the paper. In a wide window that is both cards open, the rows' on the
+ * left and the side's on the right, and no more — not whole columns. In a
+ * compact one, the most that is ever there at once: a card open on one
+ * side, and on the other only its buttons.
+ */
+function fitWidth(): number {
+  const { rowsShut, rowsOpen, sideShut, sideOpen } = besideRooms();
+  const beside = COMPACT.matches
+    ? Math.max(rowsOpen + sideShut, rowsShut + sideOpen)
+    : rowsOpen + sideOpen;
+  // The fit holds back room for an outline this paper doesn't have.
+  return Math.max(0, document.documentElement.clientWidth - beside + 2 * OUTLINE);
 }
 
 /** How far the sheet has been slid from its place, in px: right and down are positive. */
@@ -430,12 +445,24 @@ function sheetShift(): { x: number; y: number } {
   return { x: x || 0, y: y || 0 };
 }
 
+/** Which cards were open when the sheet was last placed. */
+let shiftedFor = '';
+
 /**
- * Slide the sheet out of an open card's way, by as much as the card runs
- * past the window's edge. Sideways in a compact window: right for the
- * rows' card, left for the side's. And up, in any window too short for the
- * side's card under its buttons, as far as the stage's top allows. Back to
- * its place with nothing in the way.
+ * Place the sheet off the stage's middle, where the middle won't do.
+ *
+ * In a wide window, at rest: the rows' card needs more room than the
+ * side's, so a paper as wide as the two allow sits right of the middle by
+ * half the difference. Less in a window with room to spare, and not at all
+ * in one with plenty.
+ *
+ * Out of an open card's way, by as much as the card runs past the window's
+ * edge. Sideways in a compact window: right for the rows' card, left for
+ * the side's. And up, in any window too short for the side's card under
+ * its buttons, as far as the stage's top allows.
+ *
+ * It slides there when a card has opened or closed, and is put there at
+ * once when only the window or the sheet has changed.
  */
 function shiftSheet(): void {
   let x = 0;
@@ -443,10 +470,13 @@ function shiftSheet(): void {
   if (frame.parentElement === sheetBox) {
     const moved = sheetShift();
     const sideShown = sideOpen !== null && sideCard.childElementCount > 0;
-    if (COMPACT.matches && editing !== null) {
+    if (!COMPACT.matches) {
+      const left = sheetBox.getBoundingClientRect().left - moved.x;
+      x = Math.max(0, besideRooms().rowsOpen - left);
+    } else if (editing !== null) {
       const left = cardSlot.getBoundingClientRect().left - moved.x + card.offsetLeft;
       x = Math.max(0, EDGE - left);
-    } else if (COMPACT.matches && sideShown) {
+    } else if (sideShown) {
       const right =
         pageTools.getBoundingClientRect().left - moved.x + sideCard.offsetLeft + sideCard.offsetWidth;
       x = -Math.max(0, right - (document.documentElement.clientWidth - EDGE));
@@ -459,7 +489,18 @@ function shiftSheet(): void {
       y = -Math.max(0, Math.min(room, over));
     }
   }
-  sheetBox.style.translate = x === 0 && y === 0 ? '' : `${x}px ${y}px`;
+  const to = x === 0 && y === 0 ? '' : `${x}px ${y}px`;
+  const cards = `${editing !== null}|${sideOpen}`;
+  const slide = cards !== shiftedFor;
+  shiftedFor = cards;
+  // Already there, or on its way.
+  if (to === sheetBox.style.translate) return;
+  if (!slide) sheetBox.style.transition = 'none';
+  sheetBox.style.translate = to;
+  if (!slide) {
+    sheetBox.getBoundingClientRect();
+    sheetBox.style.transition = '';
+  }
 }
 
 /**
@@ -605,6 +646,10 @@ function placeRowEdits(content: PreviewSheet): void {
     const words = first.querySelector<HTMLElement>('.label-edit')!;
     const width = first.offsetWidth - label.offsetWidth + words.offsetWidth;
     sheetBox.style.setProperty('--edit-width', `${width}px`);
+    // And reading Close, as the open row's does: narrower about the same
+    // middle, so the card stands a gutter clear of that.
+    const close = first.querySelector<HTMLElement>('.label-close')!;
+    sheetBox.style.setProperty('--close-width', `${width - words.offsetWidth + close.offsetWidth}px`);
   }
   placeCard();
 }

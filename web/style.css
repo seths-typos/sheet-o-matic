@@ -3500,11 +3500,12 @@ body {
   }
 }
 
-/* The middle six columns, as tall as the window leaves them. The sheet
-   is fitted inside in main.ts and centred. Sized by the layout, never by
-   the canvas in it, or the sheet would grow the stage it's fitted to. */
+/* The window's whole width, as tall as the window leaves it. The sheet is
+   fitted inside in main.ts, which keeps the paper narrow enough for the
+   cards beside it, and centred. Sized by the layout, never by the canvas
+   in it, or the sheet would grow the stage it's fitted to. */
 .workspace-preview {
-  grid-column: 4 / span 6;
+  grid-column: 1 / -1;
   display: grid;
   place-items: center;
   min-width: 0;
@@ -3539,14 +3540,10 @@ body {
 }
 
 /* A compact window — a narrow laptop's, a tablet's; also in web/main.ts,
-   as COMPACT. The stage is the window's whole width, the page keeping the
-   paper narrow enough for one card beside it; and the bar's two controls
-   stack when the paper is narrower than the pair. */
+   as COMPACT. The page keeps the paper narrow enough for one card beside
+   it, not both; and the bar's two controls stack when the paper is
+   narrower than the pair. */
 @media (max-width: 1279px) {
-  .workspace-preview {
-    grid-column: 1 / -1;
-  }
-
   .workspace-sheet-controls {
     flex-wrap: wrap;
     row-gap: var(--spacers-padding-sm);
@@ -3664,7 +3661,8 @@ body {
   transition:
     color 200ms ease-out,
     filter 300ms ease-out,
-    transform 100ms ease-out;
+    transform 100ms ease-out,
+    translate 200ms ease-out;
 }
 
 /* Its words, trimmed to their capitals to centre on the button by them. */
@@ -3821,7 +3819,15 @@ body {
   transition:
     color 150ms ease-out,
     filter 200ms ease-out,
-    scale 200ms ease-out;
+    scale 200ms ease-out,
+    translate 200ms ease-out;
+}
+
+/* A row's button landed is smaller about its middle, which would draw its
+   edge 3% of its width back from the paper. Moved over by as much, it
+   stays the gutter from the paper it is when raised. */
+.workspace-row-edit:disabled {
+  translate: 53% -50%;
 }
 
 /* The grey of a disabled control is see-through, so the outline is the
@@ -3866,6 +3872,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .float-button {
     scale: 1;
+  }
+
+  .workspace-row-edit:disabled {
+    translate: 50% -50%;
   }
 
   .float-button.is-rising {
@@ -3932,8 +3942,10 @@ body {
 
 .workspace-row-card {
   position: absolute;
-  /* Clear of the Edit buttons, whose width the page measures. */
-  right: calc(2 * var(--grid-gutter) + var(--edit-width, 32px));
+  /* A gutter clear of its row's button, which reads Close while the card
+     is open: narrower than Edit Row, about the same middle. The page
+     measures both widths. */
+  right: calc(2 * var(--grid-gutter) + (var(--edit-width, 32px) + var(--close-width, 32px)) / 2);
   width: max-content;
   filter:
     drop-shadow(0 1px 2px rgb(0 0 0 / 0.12))
