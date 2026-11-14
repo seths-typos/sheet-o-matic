@@ -3,7 +3,7 @@ import { DEFAULT_FONT_UNITS } from '../../src/index.js';
 import { defaultLineStyles } from '../line-styles.js';
 import { drawOps } from '../../src/render/ops.js';
 import { rowInput, rowValues, type RowState } from '../row-input.js';
-import { defaultPageSetup, previewSheet } from '../sheet-preview.js';
+import { defaultPageSetup, previewSheet, valuesRoom } from '../sheet-preview.js';
 
 const row = (patch: Partial<RowState> = {}): RowState => ({
   units: { ...DEFAULT_FONT_UNITS },
@@ -121,5 +121,61 @@ describe('previewSheet', () => {
     });
 
     expect(config.page.margins).toEqual({ top: 54, right: 54, bottom: 54, left: 54 });
+  });
+
+  describe('the metric values\' room', () => {
+    const states = [row()];
+    const values = states.map(rowValues);
+    const off = { ...defaultPageSetup(), values: false };
+    const metricStarts = (content: ReturnType<typeof previewSheet>) =>
+      content.sheet.rows[0]!.lines.filter((line) => line.type !== 'slant').map((line) => line.start.x);
+
+    // "-200" at 6 pt: a hyphen and three digits, then the 6 pt gap.
+    const room = ((333 + 3 * 556) / 1000) * 6 + 6;
+
+    it('is the widest value on a drawn line and its gap', () => {
+      expect(valuesRoom(states.map(input), values)).toBeCloseTo(room, 6);
+
+      const noDescender = row({ visible: { ...row().visible, descender: false } });
+      expect(valuesRoom([input(noDescender)], [rowValues(noDescender)])).toBeCloseTo((3 * 556 / 1000) * 6 + 6, 6);
+      expect(valuesRoom(states.map(input), [])).toBe(0);
+    });
+
+    it('starts the lines after the values, the widest at the margin', () => {
+      const shown = previewSheet(states.map(input), undefined, defaultPageSetup(), values);
+      for (const x of metricStarts(shown)) expect(x).toBeCloseTo(36 + room, 6);
+
+      const texts = drawOps(shown.sheet, shown.config, shown.options).filter((op) => op.kind === 'text');
+      // Right-aligned a gap short of the lines: the widest reaches the margin.
+      for (const op of texts) expect(op.x).toBeCloseTo(36 + room - 6, 6);
+    });
+
+    it('runs the lines from the margin with the values off', () => {
+      const hidden = previewSheet(states.map(input), undefined, off, values);
+      for (const x of metricStarts(hidden)) expect(x).toBe(36);
+    });
+
+    it('holds part of the room on the way, the values not yet set', () => {
+      const half = previewSheet(states.map(input), undefined, defaultPageSetup(), values, 0.5);
+      for (const x of metricStarts(half)) expect(x).toBeCloseTo(36 + room / 2, 6);
+      expect(half.config.labels.enabled).toBe(false);
+    });
+
+    it('leaves the slant lines and the header where they were', () => {
+      const text = { left: 'Brief', center: '', right: '' };
+      const shown = previewSheet(states.map(input), text, defaultPageSetup(), values);
+      const hidden = previewSheet(states.map(input), text, off, values);
+
+      expect(shown.sheet.header!.x).toBeCloseTo(36, 6);
+      expect(shown.sheet.header!.width).toBeCloseTo(hidden.sheet.header!.width, 6);
+
+      // The same lines, less any trimmed away at the left.
+      const ends = (content: typeof shown) =>
+        content.sheet.rows[0]!.lines.filter((line) => line.type === 'slant').map((line) => line.end.x);
+      const kept = ends(shown);
+      for (const x of kept.slice(-5)) {
+        expect(ends(hidden).some((other) => Math.abs(other - x) < 1e-6)).toBe(true);
+      }
+    });
   });
 });

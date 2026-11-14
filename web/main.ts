@@ -38,8 +38,12 @@ let sheet: SheetState = {
   page: defaultPageSetup(),
 };
 
-/** The sheet as it will print, or why it can't be made. */
-function sheetContent(): PreviewSheet | { message: string } {
+/**
+ * The sheet as it will print, or why it can't be made. `room` is how much
+ * of the metric values' room is held, for drawing it part way through
+ * their coming or going.
+ */
+function sheetContent(room?: number): PreviewSheet | { message: string } {
   const inputs = [];
   const values: LabelText[] = [];
   for (let i = 0; i < sheet.rowCount; i++) {
@@ -54,7 +58,7 @@ function sheetContent(): PreviewSheet | { message: string } {
     inputs.push(input);
   }
   try {
-    return previewSheet(inputs, sheet.header, sheet.page, values);
+    return previewSheet(inputs, sheet.header, sheet.page, values, room);
   } catch (error) {
     // The one page-wide value that can leave no room: the margin.
     if (!(error instanceof ConfigError)) throw error;
@@ -272,6 +276,16 @@ function slideTimeAt(progress: number): number {
     const [t0, p0] = SLIDE_EASE[i - 1]!;
     const [t1, p1] = SLIDE_EASE[i]!;
     if (progress <= p1) return t0 + ((progress - p0) / (p1 - p0)) * (t1 - t0);
+  }
+  return 1;
+}
+
+/** How far along the slide is, 0 to 1 and a little past, at a share of its time. */
+function slideProgressAt(time: number): number {
+  for (let i = 1; i < SLIDE_EASE.length; i++) {
+    const [t0, p0] = SLIDE_EASE[i - 1]!;
+    const [t1, p1] = SLIDE_EASE[i]!;
+    if (time <= t1) return p0 + ((time - t0) / (t1 - t0)) * (p1 - p0);
   }
   return 1;
 }
@@ -526,7 +540,8 @@ let reshapes = 0;
  * lands. Otherwise the frame takes its size at once.
  */
 function redraw(animate = false): void {
-  const content = sheetContent();
+  moveValuesRoom();
+  const content = sheetContent(valuesRoom);
   if ('message' in content) {
     message.textContent = content.message;
     // A value being fixed in a card: the last good sheet stays, faded, so
@@ -578,6 +593,41 @@ function redraw(animate = false): void {
   setTimeout(() => {
     if (reshape === reshapes) setReshaping(false);
   }, length);
+}
+
+/**
+ * How much of the metric values' room the drawn sheet holds, 0 to 1, and
+ * where it is headed: all of it with the values shown, none without.
+ */
+let valuesRoom = sheet.page.values ? 1 : 0;
+let valuesRoomTo = valuesRoom;
+
+/**
+ * Switching the metric values on or off: the lines move to their new
+ * start on the cards' slide, drawn again each frame, rather than jump.
+ * Off, the values go at once and the lines run out over where they were;
+ * on, the lines draw back and the values are set once there's room.
+ */
+function moveValuesRoom(): void {
+  const to = sheet.page.values ? 1 : 0;
+  if (to === valuesRoomTo) return;
+  valuesRoomTo = to;
+  if (REDUCED_MOTION.matches) {
+    valuesRoom = to;
+    return;
+  }
+  const from = valuesRoom;
+  const length = slideLength();
+  const began = performance.now();
+  const step = (now: number) => {
+    // Switched back since: that move has taken over.
+    if (valuesRoomTo !== to) return;
+    const time = Math.min(1, (now - began) / length);
+    valuesRoom = time === 1 ? to : from + (to - from) * slideProgressAt(time);
+    redraw();
+    if (time < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 /** A new orientation or paper: the sheet changes shape before your eyes. */

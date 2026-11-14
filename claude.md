@@ -24,7 +24,7 @@ The rebuilt front end narrows what the user controls. The engine's wider surface
 - **Row count** is 1–6.
 - **Row height** — the total metric height, highest metric line to lowest — is determined by the row count alone. The user never sets a cap height or a row height in points.
 - **Rows are evenly spaced.** The row gap value is not decided yet.
-- **Metric values, not letters.** The printed sheet and its preview label each drawn metric line with its own value in font units — row by row, as rows can differ — in the left margin, through `DrawOptions.labelText`. Page Setup's Show Metric Values toggle switches them off; on by default. The engine's B / C / X letters stay for sheets made without the UX. Decided 2026-10-13, replacing the no-labels rule.
+- **Metric values, not letters.** The printed sheet and its preview label each drawn metric line with its own value in font units — row by row, as rows can differ — at the left of the row, through `DrawOptions.labelText`. Page Setup's Show Metric Values toggle switches them off; on by default. The values sit inside the left margin, not in it: the UX starts every row's lines further in by the widest value and its gap (`valuesRoom` in `web/sheet-preview.ts`, as extra left margin), and with the values off the lines run from the margin itself. Slant lines and the header keep their places either way. On the page the lines slide between the two on the cards' easing. Decided 2026-11-14; the values used to hang in the margin. The engine's B / C / X letters stay for sheets made without the UX. Decided 2026-10-13, replacing the no-labels rule.
 
 **Happy path:**
 1. Choose the number of rows (1–6).
