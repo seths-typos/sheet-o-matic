@@ -642,6 +642,17 @@ new ResizeObserver(() => {
   redraw();
 }).observe(stage);
 
+/** Whose this is: a link out, at the window's bottom left. */
+function creditLink(): HTMLAnchorElement {
+  const credit = document.createElement('a');
+  credit.className = 'body-sm credit-link workspace-credit';
+  credit.href = 'https://www.instagram.com/seths_typos/';
+  credit.target = '_blank';
+  credit.rel = 'noopener';
+  credit.textContent = "One of Seth's Typos";
+  return credit;
+}
+
 /** Build the page from the sheet, replacing what was there. */
 function render(): void {
   // Over the paper: how many rows and whether they share their metrics on
@@ -686,7 +697,7 @@ function render(): void {
   // again; until they are, the sheet is drawn as it stands.
   const next = document.createElement('div');
   next.className = 'rows workspace-view';
-  next.append(topBar, stage);
+  next.append(topBar, stage, creditLink());
 
   if (root) root.replaceWith(next);
   else document.querySelector('#app')!.prepend(next);

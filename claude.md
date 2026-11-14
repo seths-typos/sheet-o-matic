@@ -32,9 +32,9 @@ The rebuilt front end narrows what the user controls. The engine's wider surface
 3. Optionally change line styles: weight, dash and colour.
 4. Optionally set up the page and add header text.
 5. Preview, then print or save the PDF. Print goes through the browser's print dialog (`render/svg/`, `printSheet`): the sheet as SVG at its true size, on a page of its size with no margins. Safari and iOS browsers ignore the page's paper and add their own margins, so there Print opens the sheet as a PDF in a new tab to print from (2026-11-14).
-6. Optionally save the config as JSON. A saved config can be uploaded again to restore the sheet.
+6. Shelved 2026-11-14, see Shelved below: optionally save the config as JSON. A saved config can be uploaded again to restore the sheet.
 
-**Upload Config** opens a modal (`web/upload-dialog.ts`) with a drop area and a Choose File picker. A .ufo or .glyphspackage is a folder, read through its `fontinfo.plist`; on macOS both are packages the picker offers as one file, which Chrome sends zipped, so a zip — or a .ufoz — is opened to that file (`web/import/zip.ts`). A folder dropped as a folder works too. Decided 2026-10-13, after a separate Choose Folder button proved unneeded. It takes a saved config or a font source, the file told apart by its contents (`web/import/read-upload.ts`). A config (`web/sheet-file.ts`, JSON marked `"app": "sheet-o-matic"`) replaces the whole sheet, every value checked first. A font's metrics go into row 1, and so every row when Metrics Across Rows is Same. Read from:
+**Upload Config** (shelved 2026-11-14; what follows is how it works when mounted) opens a modal (`web/upload-dialog.ts`) with a drop area and a Choose File picker. A .ufo or .glyphspackage is a folder, read through its `fontinfo.plist`; on macOS both are packages the picker offers as one file, which Chrome sends zipped, so a zip — or a .ufoz — is opened to that file (`web/import/zip.ts`). A folder dropped as a folder works too. Decided 2026-10-13, after a separate Choose Folder button proved unneeded. It takes a saved config or a font source, the file told apart by its contents (`web/import/read-upload.ts`). A config (`web/sheet-file.ts`, JSON marked `"app": "sheet-o-matic"`) replaces the whole sheet, every value checked first. A font's metrics go into row 1, and so every row when Metrics Across Rows is Same. Read from:
 - **Glyphs 3 or later** — `.glyphs`, or a `.glyphspackage`'s `fontinfo.plist`. Glyphs 2 files are refused. Masters' `metricValues` pair with the font's `metrics` list by position; a missing `pos` is 0.
 - **UFO** — its `fontinfo.plist`. Italic angle sign flipped.
 - **Not OTF/TTF** (or TTC, WOFF): their stored metrics don't reliably match the design, so they are refused, pointing to the source. Decided 2026-10-13.
@@ -60,10 +60,9 @@ A line the font lacks, or has out of the editor's order (an ascender on the cap 
 **Open:**
 - The row gap value, and whether it scales with row count. Deferred — use the current default until decided.
 
-**To do — back onto the page.** The `frontend-overhaul` rebuild (2026-10-27) shows the row count, Metrics Across Rows and a live preview, with an Edit button beside each row that slides in its metrics card (`web/row-card.ts`), and Page Setup and Line Styles buttons right of the paper, each sliding in its card: the page's setup and the header's text (`web/page-card.ts`), or a Metric Line menu over that line's weight, style and colour (`web/line-card.ts`). Print and Save to PDF sit under the paper at its right. Everything below is on `main`'s page and still in `web/`, unmounted, waiting for a place:
-- Save Config.
-- Upload Config: taken off the page 2026-11-13. The dialog and `load` stay in `web/main.ts`; nothing opens them.
-- The credit link.
+**The page.** The `frontend-overhaul` rebuild (2026-10-27) shows the row count, Metrics Across Rows and a live preview, with an Edit button beside each row that slides in its metrics card (`web/row-card.ts`), and Page Setup and Line Styles buttons right of the paper, each sliding in its card: the page's setup and the header's text (`web/page-card.ts`), or a Metric Line menu over that line's weight, style and colour (`web/line-card.ts`). Print and Save to PDF sit under the paper at its right. The credit link sits at the window's bottom left, `--spacing-5` (24px) from each edge.
+
+**Shelved: Save Config and Upload Config.** Left off the `frontend-overhaul` page on purpose, as likely too confusing; they come back if people ask for them. Decided 2026-11-14. That shelves reading a font's metrics from a Glyphs or UFO source too, since Upload Config is its only way in. Both are on `main`'s page, and their code stays in `web/`, unmounted: the dialog and `load` in `web/main.ts`, `web/upload-dialog.ts`, `web/import/`, `web/sheet-file.ts`. Nothing opens them. Nothing else is waiting to go back onto the page.
 
 The Preview button and the per-row previews are not coming back: the live preview replaces them. Decided 2026-11-14.
 

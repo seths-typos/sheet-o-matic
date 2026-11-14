@@ -3453,6 +3453,50 @@ body {
   background-position: center;
 }
 
+/* The credit, on the mat at the window's bottom left: --spacing-5 from
+   each edge, measured to its capitals' foot and its first letter. Out of
+   the grid, so it takes no room from the stage. */
+.rows.workspace-view .workspace-credit {
+  position: fixed;
+  left: var(--spacing-5);
+  bottom: var(--spacing-5);
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+}
+
+/* Its underline is drawn out from the left under the pointer, and back
+   the way it came: a rule under the letters, scaled from nothing, in
+   place of the text's own underline, which can only appear. */
+.rows.workspace-view .workspace-credit:hover {
+  text-decoration: none;
+}
+
+.workspace-credit::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(-0.2em - var(--border-base));
+  height: var(--border-base);
+  background: currentColor;
+  scale: 0 1;
+  transform-origin: left;
+  transition: scale 200ms ease-out;
+}
+
+.workspace-credit:hover::after,
+.workspace-credit:focus-visible::after {
+  scale: 1 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-credit::after {
+    transition: none;
+  }
+}
+
 /* The middle six columns, as tall as the window leaves them. The sheet
    is fitted inside in main.ts and centred. Sized by the layout, never by
    the canvas in it, or the sheet would grow the stage it's fitted to. */
