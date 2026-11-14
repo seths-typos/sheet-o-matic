@@ -15,7 +15,7 @@ export interface RowCardOptions {
 }
 
 /**
- * One row's metrics on a card titled Row N Metrics: a toggle and a value
+ * One row's metrics on a card titled Row N: a toggle and a value
  * for each metric line and for the italic angle, as the row editor had
  * them. The sheet itself is the preview, so the card carries none.
  *
@@ -31,7 +31,7 @@ export function createRowCard(options: RowCardOptions): HTMLElement {
   const title = document.createElement('h3');
   title.className = 'heading-h3 frame-title row-card-title';
   title.id = `row-card-title-${row}`;
-  title.textContent = `Row ${row} Metrics`;
+  title.textContent = `Row ${row}`;
   card.setAttribute('aria-labelledby', title.id);
 
   const controls = document.createElement('div');

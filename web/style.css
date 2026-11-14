@@ -3476,6 +3476,16 @@ body {
   gap: var(--spacers-margin-lg);
 }
 
+/* Print and Save to PDF, under the paper at its right end, as far below
+   it as the bar's toggles are above: the grid's row gap. */
+.workspace-sheet-actions {
+  grid-row: 3;
+  grid-column: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacers-padding-sm);
+}
+
 /* The rows' two controls side by side at the bar's left. */
 .workspace-sheet-controls {
   display: flex;

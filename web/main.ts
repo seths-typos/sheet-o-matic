@@ -6,6 +6,7 @@ import { defaultLineStyles } from './line-styles.js';
 import { ConfigError } from '../src/index.js';
 import type { LabelText } from '../src/render/ops.js';
 import { createLineCard } from './line-card.js';
+import { printSheet, saveSheetPdf } from './output.js';
 import { createPageCard } from './page-card.js';
 import { createRowCard } from './row-card.js';
 import { copyRowState, newRowState, rowInput, rowValues } from './row-input.js';
@@ -168,11 +169,51 @@ const PENCIL = 'M3 13l.6-3L10.5 3.1a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4L6 12.4 3
 const BRUSH =
   'M13.7 2.3a1.2 1.2 0 0 0-1.7 0L6.6 7.9l2 2 5.2-5.9a1.2 1.2 0 0 0-.1-1.7z' +
   'M6.6 7.9c-1.7 0-2.9 1.1-3 2.8-.1 1.1-.6 1.9-1.6 2.4 2.8.9 6.1.1 6.6-3.2';
+/** A printer: the sheet going in at the top, the body, the sheet coming out. */
+const PRINTER =
+  'M5 6V2.5h6V6' +
+  'M5 11.5H3.5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1H11' +
+  'M5 9.5h6v4H5z';
+/** A document with its corner folded, an arrow down onto it: a file saved. */
+const PDF = 'M4 2.5h5l3 3v8H4zM9 2.5v3h3M8 7.3v4M6.3 9.7L8 11.4l1.7-1.7';
 /** An X. */
 const CROSS = 'M4 4l8 8M12 4l-8 8';
 /** A gear: eight teeth round a rim, then the hole at its middle. */
 const GEAR =
   'M6.90 3.43L7.21 1.75L8.79 1.75L9.10 3.43L10.46 3.99L11.86 3.02L12.98 4.14L12.01 5.54L12.57 6.90L14.25 7.21L14.25 8.79L12.57 9.10L12.01 10.46L12.98 11.86L11.86 12.98L10.46 12.01L9.10 12.57L8.79 14.25L7.21 14.25L6.90 12.57L5.54 12.01L4.14 12.98L3.02 11.86L3.99 10.46L3.43 9.10L1.75 8.79L1.75 7.21L3.43 6.90L3.99 5.54L3.02 4.14L4.14 3.02L5.54 3.99zM10.1 8a2.1 2.1 0 1 1-4.2 0a2.1 2.1 0 0 1 4.2 0z';
+
+/** A floating button for an action rather than a card: an icon and its words. */
+function actionFloatButton(d: string, words: string, run: () => void): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'float-button';
+  const label = document.createElement('span');
+  label.className = 'float-button-label';
+  const text = document.createElement('span');
+  text.className = 'label-edit';
+  text.textContent = words;
+  label.append(text);
+  button.append(icon('edit', d), label);
+  button.addEventListener('click', run);
+  return button;
+}
+
+/** Run `action` on the sheet, if it can be made; if not, the paper already says why. */
+const withSheet = (action: (content: PreviewSheet) => unknown) => () => {
+  const content = sheetContent();
+  if (!('message' in content)) void action(content);
+};
+
+/**
+ * Under the paper, at its right: what goes out. Print goes through the
+ * browser's print dialog, the sheet at its true size.
+ */
+const sheetActions = document.createElement('div');
+sheetActions.className = 'workspace-sheet-actions';
+sheetActions.append(
+  actionFloatButton(PRINTER, 'Print', withSheet(printSheet)),
+  actionFloatButton(PDF, 'Save to PDF', withSheet(saveSheetPdf)),
+);
 
 /** Right of the paper, outside it, level with its top: Page Setup. */
 const pageTools = document.createElement('div');
@@ -500,15 +541,17 @@ function redraw(animate = false): void {
     return;
   }
   if (frame.parentElement !== sheetBox) {
-    sheetBox.replaceChildren(sheetBar, frame, rowEdits, cardSlot, pageTools);
+    sheetBox.replaceChildren(sheetBar, frame, rowEdits, cardSlot, pageTools, sheetActions);
     // Nothing on screen to change from.
     animate = false;
   }
   // The paper's colour, as the sheet prints on it.
   const white = getComputedStyle(document.documentElement).getPropertyValue('--color-white').trim();
-  // The stage's height less the bar's and the gap under it.
-  const barHeight = sheetBar.offsetHeight + parseFloat(getComputedStyle(sheetBox).rowGap);
-  drawSheetFitted(paper, { width: stage.clientWidth, height: stage.clientHeight - barHeight }, content, white);
+  // The stage's height less the bar's over the paper, the actions' under
+  // it, and the gap between each and the paper.
+  const around =
+    sheetBar.offsetHeight + sheetActions.offsetHeight + 2 * parseFloat(getComputedStyle(sheetBox).rowGap);
+  drawSheetFitted(paper, { width: stage.clientWidth, height: stage.clientHeight - around }, content, white);
   frame.classList.remove('is-stale');
   if (message.parentElement === frame) message.remove();
   placeRowEdits(content);
