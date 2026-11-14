@@ -3671,15 +3671,13 @@ body {
   text-box: trim-both cap alphabetic;
 }
 
-/* A row's Edit button: on the mat left of the paper, centred on the row.
-   It is placed by its middle — half an Edit Row button's width, which the
-   page measures, and a gutter from the paper — so it is a gutter off the
-   paper reading Edit Row, and its middle stays where it is when it
-   narrows to read Close. */
+/* A row's Edit button: on the mat left of the paper, centred on the row's
+   height, its right edge a gutter from the paper. It keeps that edge when
+   it narrows to read Close, as Page Setup's keeps its left one. */
 .workspace-row-edit {
   position: absolute;
-  right: calc(var(--grid-gutter) + var(--edit-width, 32px) / 2);
-  translate: 50% -50%;
+  right: var(--grid-gutter);
+  translate: 0 -50%;
 }
 
 /* A button's own words, or Close while what it opens is open. The two share a cell,
@@ -3827,7 +3825,7 @@ body {
    edge 3% of its width back from the paper. Moved over by as much, it
    stays the gutter from the paper it is when raised. */
 .workspace-row-edit:disabled {
-  translate: 53% -50%;
+  translate: 3% -50%;
 }
 
 /* The grey of a disabled control is see-through, so the outline is the
@@ -3875,7 +3873,7 @@ body {
   }
 
   .workspace-row-edit:disabled {
-    translate: 50% -50%;
+    translate: 0 -50%;
   }
 
   .float-button.is-rising {
@@ -3943,9 +3941,8 @@ body {
 .workspace-row-card {
   position: absolute;
   /* A gutter clear of its row's button, which reads Close while the card
-     is open: narrower than Edit Row, about the same middle. The page
-     measures both widths. */
-  right: calc(2 * var(--grid-gutter) + (var(--edit-width, 32px) + var(--close-width, 32px)) / 2);
+     is open, and whose width then the page measures. */
+  right: calc(2 * var(--grid-gutter) + var(--close-width, 32px));
   width: max-content;
   filter:
     drop-shadow(0 1px 2px rgb(0 0 0 / 0.12))

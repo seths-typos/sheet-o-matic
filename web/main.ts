@@ -416,8 +416,8 @@ function besideRooms(): { rowsShut: number; rowsOpen: number; sideShut: number; 
   return {
     rowsShut,
     // The card a gutter from its row's button, which reads Close: the
-    // narrower word, about the middle the wider one keeps.
-    rowsOpen: ROW_CARD_WIDTH + gutter + (close - edit) / 2 + rowsShut,
+    // narrower word, against the paper as the wider one is.
+    rowsOpen: ROW_CARD_WIDTH + gutter + close + gutter + EDGE,
     sideShut: gutter + buttons + EDGE,
     sideOpen: gutter + SIDE_CARD_WIDTH + EDGE,
   };
@@ -638,16 +638,16 @@ function placeRowEdits(content: PreviewSheet): void {
   });
   markRowEdits();
   // How wide a button is reading Edit Row: its width now, with its words'
-  // cell — which may be mid-change — swapped for those words. The buttons
-  // are placed by it, and the card stands clear of it.
+  // cell — which may be mid-change — swapped for those words. The paper's
+  // room is worked out from it.
   const first = rowEdits.firstElementChild as HTMLElement | null;
   if (first) {
     const label = first.querySelector<HTMLElement>('.float-button-label')!;
     const words = first.querySelector<HTMLElement>('.label-edit')!;
     const width = first.offsetWidth - label.offsetWidth + words.offsetWidth;
     sheetBox.style.setProperty('--edit-width', `${width}px`);
-    // And reading Close, as the open row's does: narrower about the same
-    // middle, so the card stands a gutter clear of that.
+    // And reading Close, as the open row's does: narrower, its right edge
+    // where it was, so the card stands a gutter clear of that.
     const close = first.querySelector<HTMLElement>('.label-close')!;
     sheetBox.style.setProperty('--close-width', `${width - words.offsetWidth + close.offsetWidth}px`);
   }
