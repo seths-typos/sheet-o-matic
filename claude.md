@@ -67,7 +67,8 @@ A line the font lacks, or has out of the editor's order (an ascender on the cap 
 - Print, Save to PDF, Save Config.
 - Upload Config: taken off the page 2026-11-13. The dialog and `load` stay in `web/main.ts`; nothing opens them.
 - The credit link.
-- The Preview button and the per-row previews are probably replaced by the live preview — to confirm.
+
+The Preview button and the per-row previews are not coming back: the live preview replaces them. Decided 2026-11-14.
 
 ## Tech stack
 

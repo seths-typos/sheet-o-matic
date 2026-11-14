@@ -3480,9 +3480,24 @@ body {
   gap: var(--spacers-margin-md);
 }
 
-/* White inside the bar's toggles, as the paper under them. */
+/* White inside the bar's toggles, as the paper under them, and as tall as
+   the rows' Edit buttons, 32px, their words larger in proportion. */
 .workspace-sheet-bar .choice {
   --toggle-ground: var(--color-white);
+  height: 32px;
+}
+
+.workspace-sheet-bar .choice-option {
+  font-size: calc(32px * 0.29);
+}
+
+/* Each control's name a step heavier than the regular it is elsewhere. */
+.workspace-sheet-bar .sheet-control-name {
+  font-weight: var(--weight-ui-medium);
+}
+
+.workspace-sheet-bar .count-toggle .choice-option {
+  min-width: 36px;
 }
 
 /* An Edit button for each row, on the mat a gutter to the paper's left,
@@ -3509,49 +3524,91 @@ body {
   transition: none;
 }
 
-/* A circle outlined in the ink, white inside it as the paper is, a pencil
-   in the ink; filled with the ink on hover, the pencil in white. Floating
-   over the mat as the paper does, its shadow from the same light, scaled
-   to the button. */
+/* A square outlined in the ink, its bottom-left and top-right corners
+   cut as the toggles' are, white inside as the paper is, a pencil in the
+   ink; filled with the ink on hover, the pencil in white. Floating over
+   the mat as the paper does, its shadow from the same light, scaled to
+   the button.
+
+   Like the frame, the outline is two filled shapes behind the icon:
+   ::before the ink one, ::after the white one inset by the border, the
+   corners cut from both. The shadow is a filter, so it follows the cut
+   corners; a box-shadow would be cut off with them. */
 .workspace-row-edit {
+  --cut: var(--spacing-2);
+  --inner-cut: calc(var(--cut) - var(--border-thick) * 0.5858);
+  --near-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.1)) drop-shadow(1px 2px 3px rgb(0 0 0 / 0.14));
+
   position: absolute;
   right: var(--grid-gutter);
+  isolation: isolate;
   display: grid;
   place-items: center;
   width: 32px;
   height: 32px;
   padding: 0;
-  border: var(--border-thick) solid var(--ink);
-  border-radius: 50%;
-  background: var(--color-white);
+  border: none;
+  background: none;
   color: var(--ink);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.12),
-    2px 5px 8px rgb(0 0 0 / 0.2);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.12)) drop-shadow(2px 5px 8px rgb(0 0 0 / 0.2));
   translate: 0 -50%;
   cursor: pointer;
   transition:
-    background 120ms ease-out,
-    border-color 120ms ease-out,
     color 120ms ease-out,
-    box-shadow 300ms ease-out,
+    filter 300ms ease-out,
     transform 100ms ease-out;
+}
+
+.workspace-row-edit::before,
+.workspace-row-edit::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border-radius: var(--corner-xs);
+  transition: background 120ms ease-out;
+}
+
+.workspace-row-edit::before {
+  inset: 0;
+  background: var(--ink);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cut)) 0,
+    100% var(--cut),
+    100% 100%,
+    var(--cut) 100%,
+    0 calc(100% - var(--cut))
+  );
+}
+
+.workspace-row-edit::after {
+  inset: var(--border-thick);
+  background: var(--color-white);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--inner-cut)) 0,
+    100% var(--inner-cut),
+    100% 100%,
+    var(--inner-cut) 100%,
+    0 calc(100% - var(--inner-cut))
+  );
 }
 
 /* Pressed, it shrinks by a tenth, as if pushed down toward the mat, its
    shadow closing under it; released, it comes back up. As a transform, to
    leave `scale` to the rise and the landing. */
 .workspace-row-edit:enabled:active {
-  box-shadow:
-    0 1px 1px rgb(0 0 0 / 0.1),
-    1px 2px 3px rgb(0 0 0 / 0.14);
+  filter: var(--near-shadow);
   transform: scale(0.9);
   transition-duration: 100ms;
 }
 
 .workspace-row-edit:enabled:hover {
-  background: var(--ink);
   color: var(--color-white);
+}
+
+.workspace-row-edit:enabled:hover::after {
+  background: var(--ink);
 }
 
 /* A row that follows row 1's metrics: greyed out and nearer the mat, a
@@ -3559,24 +3616,36 @@ body {
    ease with no spring — it can't sink past the mat — and quicker than
    rising. */
 .workspace-row-edit:disabled {
-  border-color: var(--color-ui-disabled);
-  background: var(--color-bg);
-  box-shadow:
-    0 1px 1px rgb(0 0 0 / 0.1),
-    1px 2px 3px rgb(0 0 0 / 0.14);
+  filter: var(--near-shadow);
   color: var(--color-ui-disabled);
   scale: 0.94;
   cursor: default;
   transition:
-    background 150ms ease-out,
-    border-color 150ms ease-out,
     color 150ms ease-out,
-    box-shadow 200ms ease-out,
+    filter 200ms ease-out,
     scale 200ms ease-out;
 }
 
+/* The grey of a disabled control is see-through, so the outline is the
+   mat's grey with it laid over, not it alone over the ink. */
+.workspace-row-edit:disabled::before {
+  background:
+    linear-gradient(var(--color-ui-disabled), var(--color-ui-disabled)),
+    var(--color-bg);
+  transition-duration: 150ms;
+}
+
+.workspace-row-edit:disabled::after {
+  background: var(--color-bg);
+  transition-duration: 150ms;
+}
+
 /* Each row lands --rise-delay after the one above. */
-.workspace-row-edit.is-landing {
+.workspace-row-edit.is-landing,
+.workspace-row-edit.is-landing::before,
+.workspace-row-edit.is-landing::after,
+.workspace-row-edit.is-rising::before,
+.workspace-row-edit.is-rising::after {
   transition-delay: var(--rise-delay, 0ms);
 }
 
