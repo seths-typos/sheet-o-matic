@@ -3223,7 +3223,9 @@ body {
   clip-path: none;
   background: transparent;
   color: var(--toggle-ink);
-  transition: color var(--toggle-ease);
+  /* The weight too: the face has a weight axis, so a label thickens into
+     its hover and chosen weights rather than jumping to them. */
+  transition: color var(--toggle-ease), font-weight var(--toggle-ease);
 }
 
 /* The chosen label semibold, a step past a hovered option's medium. */
