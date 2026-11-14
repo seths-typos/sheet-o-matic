@@ -116,22 +116,13 @@ export function createRowCountTabs(
   onChange: (count: number) => void,
 ): HTMLElement {
   const counts = Array.from({ length: MAX_ROWS - MIN_ROWS + 1 }, (_, i) => String(MIN_ROWS + i));
-  const control = createChoiceToggle(
+  const control = createStepToggle(
     'Number of rows',
     counts.map((count) => ({ value: count, label: count })),
     String(value),
-    (count) => {
-      place(count);
-      onChange(Number(count));
-    },
+    (count) => onChange(Number(count)),
   );
   control.classList.add('count-toggle');
-  // Read by the stylesheet: how many tabs share the shell, and which the
-  // thumb sits under.
-  const shell = control.querySelector<HTMLElement>('.choice')!;
-  shell.style.setProperty('--options', String(counts.length));
-  const place = (count: string) => shell.style.setProperty('--chosen', String(counts.indexOf(count)));
-  place(String(value));
   return control;
 }
 
@@ -197,4 +188,36 @@ export function createChoiceToggle<T extends string>(
 /** A control's name: shown above it, or kept for screen readers only. */
 export function nameClass(options: ControlOptions): string {
   return options.hideName ? 'visually-hidden' : 'ui-sm sheet-control-name';
+}
+
+/**
+ * A choice toggle of any number of options: the thumb as wide as one, and
+ * stepping one at a time. The plain toggle's thumb is a half, for two.
+ */
+export function createStepToggle<T extends string>(
+  name: string,
+  choices: Choice<T>[],
+  value: T,
+  onChange: (value: T) => void,
+  options: ControlOptions = {},
+): HTMLElement {
+  const values = choices.map((choice) => choice.value);
+  const control = createChoiceToggle(
+    name,
+    choices,
+    value,
+    (chosen) => {
+      place(chosen);
+      onChange(chosen);
+    },
+    options,
+  );
+  control.classList.add('step-toggle');
+  // Read by the stylesheet: how many options share the shell, and which
+  // the thumb sits under.
+  const shell = control.querySelector<HTMLElement>('.choice')!;
+  shell.style.setProperty('--options', String(values.length));
+  const place = (chosen: T) => shell.style.setProperty('--chosen', String(values.indexOf(chosen)));
+  place(value);
+  return control;
 }

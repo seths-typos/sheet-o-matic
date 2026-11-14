@@ -3385,13 +3385,13 @@ body {
    tab wide and steps a tab at a time; --options and --chosen are set on
    the shell by the control. The numbers go without lamps: the thumb marks
    the choice. */
-.count-toggle .choice::after {
+.step-toggle .choice::after {
   width: calc(100% / var(--options));
 }
 
 /* As specific as the two-way toggle's step to its last option, and after
    it, so the last tab's thumb lands here too. */
-.count-toggle .choice:has(.choice-option input:checked)::after {
+.step-toggle .choice:has(.choice-option input:checked)::after {
   translate: calc(100% * var(--chosen));
 }
 
@@ -3437,6 +3437,9 @@ body {
   grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
   min-height: 0;
+  /* The page's card waits, and slides, past the right edge: cut off there
+     rather than widening the page, which would bring scroll bars. */
+  overflow-x: clip;
   padding-bottom: var(--spacers-padding-md);
   background-color: var(--paper);
   background-image:
@@ -3524,43 +3527,122 @@ body {
   transition: none;
 }
 
-/* A square outlined in the ink, its bottom-left and top-right corners
-   cut as the toggles' are, white inside as the paper is, a pencil in the
-   ink; filled with the ink on hover, the pencil in white. Floating over
-   the mat as the paper does, its shadow from the same light, scaled to
-   the button.
+/* A button floating over the mat, as the paper does: the rows' Edit
+   buttons and Page Setup. Outlined in the ink, its bottom-left and
+   top-right corners cut as the toggles' are, white inside as the paper is,
+   its icon and words in the ink; on hover the ink wipes across it from the top
+   left, they turning white. Its shadow is from the paper's light, scaled to the button.
 
    Like the frame, the outline is two filled shapes behind the icon:
    ::before the ink one, ::after the white one inset by the border, the
    corners cut from both. The shadow is a filter, so it follows the cut
    corners; a box-shadow would be cut off with them. */
-.workspace-row-edit {
+.float-button {
   --cut: var(--spacing-2);
   --inner-cut: calc(var(--cut) - var(--border-thick) * 0.5858);
   --near-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.1)) drop-shadow(1px 2px 3px rgb(0 0 0 / 0.14));
 
-  position: absolute;
-  right: var(--grid-gutter);
+  position: relative;
   isolation: isolate;
-  display: grid;
-  place-items: center;
-  width: 32px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 32px;
   height: 32px;
-  padding: 0;
+  padding: 0 var(--spacing-3) 0 var(--spacing-2);
   border: none;
   background: none;
   color: var(--ink);
+  font: var(--weight-ui) calc(32px * 0.29) / 1 var(--font-family-ui);
+  text-transform: uppercase;
+  white-space: nowrap;
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.12)) drop-shadow(2px 5px 8px rgb(0 0 0 / 0.2));
-  translate: 0 -50%;
   cursor: pointer;
   transition:
-    color 120ms ease-out,
+    color 200ms ease-out,
     filter 300ms ease-out,
     transform 100ms ease-out;
 }
 
-.workspace-row-edit::before,
-.workspace-row-edit::after {
+/* Its words, trimmed to their capitals to centre on the button by them. */
+.float-button-label > span {
+  display: block;
+  text-box: trim-both cap alphabetic;
+}
+
+/* A row's Edit button: on the mat left of the paper, centred on the row.
+   It is placed by its middle — half an Edit Row button's width, which the
+   page measures, and a gutter from the paper — so it is a gutter off the
+   paper reading Edit Row, and its middle stays where it is when it
+   narrows to read Close. */
+.workspace-row-edit {
+  position: absolute;
+  right: calc(var(--grid-gutter) + var(--edit-width, 32px) / 2);
+  translate: 50% -50%;
+}
+
+/* A button's own words, or Close while what it opens is open. The two share a cell,
+   as wide as the one showing — the page sets its width — which moves from
+   one width to the other, so the button's padding is the same either way.
+   The word leaving goes at once; the one arriving waits for the button to
+   reach its size. Nothing is clipped: a word wider than the cell is
+   already gone, or not yet there. */
+.float-button-label {
+  --resize: 200ms;
+
+  display: grid;
+  /* One column, the cell's own width, not its widest word's: each word
+     centres on the cell, the longer overhanging both sides alike. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  transition: width var(--resize) cubic-bezier(0.851, 0.188, 0.322, 1.097);
+}
+
+/* Leaving: quickly, straight away. */
+.float-button-label > span {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transition: opacity 80ms ease-out;
+}
+
+/* Arriving: once the size has changed. */
+.float-button:not(.is-open) .label-edit,
+.float-button.is-open .label-close {
+  opacity: 1;
+  transition: opacity 120ms ease-out var(--resize);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-button-label,
+  .float-button-label > span {
+    transition: none;
+  }
+}
+
+/* Page Setup and Line Styles: on the mat a gutter to the paper's right,
+   one under the other from its top. A slot in the paper's cell with no
+   width, at its right edge, the buttons hanging off it. */
+.workspace-page-tools {
+  position: relative;
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: end;
+  width: 0;
+}
+
+.workspace-side-buttons {
+  position: absolute;
+  top: 0;
+  left: var(--grid-gutter);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacers-padding-sm);
+}
+
+.float-button::before,
+.float-button::after {
   content: '';
   position: absolute;
   z-index: -1;
@@ -3568,7 +3650,7 @@ body {
   transition: background 120ms ease-out;
 }
 
-.workspace-row-edit::before {
+.float-button::before {
   inset: 0;
   background: var(--ink);
   clip-path: polygon(
@@ -3581,9 +3663,12 @@ body {
   );
 }
 
-.workspace-row-edit::after {
+.float-button::after {
   inset: var(--border-thick);
-  background: var(--color-white);
+  background-color: var(--color-white);
+  transition:
+    background-color 120ms ease-out,
+    clip-path 300ms ease-in-out;
   clip-path: polygon(
     0 0,
     calc(100% - var(--inner-cut)) 0,
@@ -3597,25 +3682,36 @@ body {
 /* Pressed, it shrinks by a tenth, as if pushed down toward the mat, its
    shadow closing under it; released, it comes back up. As a transform, to
    leave `scale` to the rise and the landing. */
-.workspace-row-edit:enabled:active {
+.float-button:enabled:active {
   filter: var(--near-shadow);
   transform: scale(0.9);
   transition-duration: 100ms;
 }
 
-.workspace-row-edit:enabled:hover {
+.float-button:enabled:hover {
   color: var(--color-white);
 }
 
-.workspace-row-edit:enabled:hover::after {
-  background: var(--ink);
+/* As the action buttons do: the white shrinks away into the bottom-right
+   corner, every point drawn there, the outline's ink filling in behind it
+   from the top left. */
+.float-button:enabled:hover::after {
+  clip-path: polygon(
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%
+  );
+  transition-duration: 200ms;
 }
 
 /* A row that follows row 1's metrics: greyed out and nearer the mat, a
    little smaller with a small, close shadow. Landing there is a plain
    ease with no spring — it can't sink past the mat — and quicker than
    rising. */
-.workspace-row-edit:disabled {
+.float-button:disabled {
   filter: var(--near-shadow);
   color: var(--color-ui-disabled);
   scale: 0.94;
@@ -3628,24 +3724,24 @@ body {
 
 /* The grey of a disabled control is see-through, so the outline is the
    mat's grey with it laid over, not it alone over the ink. */
-.workspace-row-edit:disabled::before {
+.float-button:disabled::before {
   background:
     linear-gradient(var(--color-ui-disabled), var(--color-ui-disabled)),
     var(--color-bg);
   transition-duration: 150ms;
 }
 
-.workspace-row-edit:disabled::after {
-  background: var(--color-bg);
+.float-button:disabled::after {
+  background-color: var(--color-bg);
   transition-duration: 150ms;
 }
 
 /* Each row lands --rise-delay after the one above. */
-.workspace-row-edit.is-landing,
-.workspace-row-edit.is-landing::before,
-.workspace-row-edit.is-landing::after,
-.workspace-row-edit.is-rising::before,
-.workspace-row-edit.is-rising::after {
+.float-button.is-landing,
+.float-button.is-landing::before,
+.float-button.is-landing::after,
+.float-button.is-rising::before,
+.float-button.is-rising::after {
   transition-delay: var(--rise-delay, 0ms);
 }
 
@@ -3653,7 +3749,7 @@ body {
    its shadow grows out from under it as it swells from its lower size a
    little past its full one and springs back. Each row starts --rise-delay
    after the one above. */
-.workspace-row-edit.is-rising {
+.float-button.is-rising {
   transition-delay: var(--rise-delay, 0ms);
   animation: row-edit-rise 320ms cubic-bezier(0.3, 0, 0.3, 1) var(--rise-delay, 0ms) backwards;
 }
@@ -3666,22 +3762,22 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workspace-row-edit {
+  .float-button {
     scale: 1;
   }
 
-  .workspace-row-edit.is-rising {
+  .float-button.is-rising {
     animation: none;
   }
 }
 
-/* A pencil, or an X while the row's card is open. */
-.workspace-row-edit .icon-close,
-.workspace-row-edit.is-open .icon-edit {
+/* Its own icon, or an X while what it opens is open. */
+.float-button .icon-close,
+.float-button.is-open .icon-edit {
   display: none;
 }
 
-.workspace-row-edit.is-open .icon-close {
+.float-button.is-open .icon-close {
   display: block;
 }
 
@@ -3734,7 +3830,8 @@ body {
 
 .workspace-row-card {
   position: absolute;
-  right: calc(2 * var(--grid-gutter) + 32px);
+  /* Clear of the Edit buttons, whose width the page measures. */
+  right: calc(2 * var(--grid-gutter) + var(--edit-width, 32px));
   width: max-content;
   filter:
     drop-shadow(0 1px 2px rgb(0 0 0 / 0.12))
@@ -3755,9 +3852,115 @@ body {
     top 350ms var(--slide-ease);
 }
 
-/* The last good sheet, faded, while a value in the card is being fixed. */
+/* The last good sheet, faded, while a value in a card is being fixed,
+   what's wrong said over the middle of it. */
 .workspace-paper.is-stale canvas {
   opacity: 0.35;
+}
+
+.workspace-paper > .workspace-preview-message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--spacers-padding-lg);
+  text-align: center;
+}
+
+/* The card either button opens, under the two of them and a gutter from
+   them, its left edge on theirs. It slides in from the window's right edge,
+   --slide away, as the rows' card does from the left, and casts the same
+   shadow. */
+.workspace-side-card {
+  /* Also in web/main.ts, as SLIDE_EASE: change both together. */
+  --slide-ease: linear(0, 0.596 18%, 0.935 38.2%, 1.005 48.2%, 1.0215 59.6%, 1);
+
+  position: absolute;
+  top: calc(2 * 32px + var(--spacers-padding-sm) + var(--grid-gutter));
+  left: var(--grid-gutter);
+  width: max-content;
+  filter:
+    drop-shadow(0 1px 2px rgb(0 0 0 / 0.12))
+    drop-shadow(2px 5px 8px rgb(0 0 0 / 0.2));
+  translate: var(--slide, 100vw) 0;
+  visibility: hidden;
+  transition:
+    translate 350ms var(--slide-ease),
+    visibility 0s 350ms;
+}
+
+.workspace-side-card.is-open {
+  translate: 0 0;
+  visibility: visible;
+  transition: translate 350ms var(--slide-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-side-card,
+  .workspace-side-card.is-open {
+    transition: none;
+  }
+}
+
+/* On the card: the controls in a column, each name over its control, then
+   the header's texts. Everything is the card's white on its blue. */
+.side-card {
+  align-items: stretch;
+}
+
+.side-card-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacers-padding-md);
+}
+
+.side-card .sheet-control {
+  align-items: flex-start;
+  gap: var(--spacers-padding-xs);
+}
+
+.side-card .sheet-control-name {
+  color: var(--ink);
+}
+
+.side-card .choice {
+  --toggle-ink: var(--ink);
+  --toggle-ground: var(--paper);
+  --toggle-lit: var(--paper);
+}
+
+/* The header's texts under their heading and its note, as far below the
+   controls as they are apart: each place's name, then its field, the fields 180px wide and a
+   margin-sm apart. */
+.page-card .page-card-header {
+  align-items: stretch;
+  gap: var(--spacers-padding-sm);
+}
+
+/* Header Text in the card title's face, in the card's white, trimmed to
+   its capitals; the line under it as wide as the fields, no wider. */
+.side-card-heading {
+  margin: 0;
+  color: var(--ink);
+  text-box: trim-both cap alphabetic;
+}
+
+.side-card-info {
+  width: 0;
+  min-width: 100%;
+  margin: 0;
+  color: var(--ink);
+}
+
+.page-card .header-fields {
+  grid-column: auto;
+  grid-template-columns: max-content 180px;
+  row-gap: var(--spacers-margin-sm);
+}
+
+.page-card .header-field-name,
+.page-card .header-field-input {
+  color: var(--ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3767,12 +3970,12 @@ body {
   }
 }
 
-.workspace-row-edit:focus-visible {
+.float-button:focus-visible {
   outline: var(--border-thick) solid var(--ink);
   outline-offset: 2px;
 }
 
-.workspace-row-edit svg {
+.float-button svg {
   width: 16px;
   height: 16px;
   fill: none;
@@ -3828,4 +4031,88 @@ body {
 .workspace-preview-message {
   margin: 0;
   color: var(--ink);
+}
+
+/* The cards' toggles as tall as the ones over the paper, 32px, their
+   words larger in proportion; the margin's field and the Metric Line menu
+   beside them the same height. */
+.side-card .choice {
+  height: 32px;
+}
+
+.side-card .choice-option {
+  font-size: calc(32px * 0.29);
+}
+
+.side-card .page-setup-margin-field {
+  height: 32px;
+}
+
+.side-card .page-setup-margin-unit {
+  width: 32px;
+  font-size: calc(32px * 0.29);
+}
+
+/* Three worded options want a little more room each than two. */
+.side-card .step-toggle .choice-option {
+  padding-inline: var(--spacing-2);
+}
+
+/* Metric Line: a menu in the margin field's make — an ink box with its
+   top-right corner cut, the picked line in a well of the card's colour,
+   a chevron at its right end. The browser's own menu opens from it. */
+.line-select {
+  --rule: var(--border-thick);
+
+  box-sizing: border-box;
+  align-self: stretch;
+  height: 32px;
+  padding: var(--rule);
+  border-radius: var(--corner-xs) 0 var(--corner-xs) var(--corner-xs);
+  background: var(--ink);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--spacing-2)) 0,
+    100% var(--spacing-2),
+    100% 100%,
+    0 100%
+  );
+}
+
+.line-select-input {
+  appearance: none;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 var(--spacing-6) 0 var(--spacing-2);
+  border: none;
+  border-radius: 0;
+  /* A chevron in the ink, drawn as two strokes meeting at a point. */
+  background:
+    linear-gradient(45deg, transparent 50%, var(--ink) 50%) right 14px center / 5px 5px no-repeat,
+    linear-gradient(-45deg, transparent 50%, var(--ink) 50%) right 9px center / 5px 5px no-repeat,
+    var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  /* The inner cut, parallel to the box's. */
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--spacing-2) + var(--rule) * 0.5858) 0,
+    100% calc(var(--spacing-2) - var(--rule) * 0.5858),
+    100% 100%,
+    0 100%
+  );
+}
+
+.line-select-input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 var(--border-base) var(--ink);
+}
+
+/* The menu itself is the browser's, on its own ground. */
+.line-select-input option {
+  background: var(--color-white);
+  color: var(--color-black);
 }

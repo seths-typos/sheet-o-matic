@@ -26,20 +26,25 @@ export function createPageSetupControls(page: PageSetup, onChange: () => void = 
     createOrientationToggle(page, onChange),
     createMarginField(page, onChange),
     createPaperToggle(page, onChange),
-    createChoiceToggle(
-      'Show metric values',
-      [
-        { value: 'on', label: 'On' },
-        { value: 'off', label: 'Off' },
-      ],
-      page.values ? 'on' : 'off',
-      (shown) => {
-        page.values = shown === 'on';
-        onChange();
-      },
-    ),
+    createValuesToggle(page, onChange),
   );
   return controls;
+}
+
+/** Show metric values: each line's value printed beside it, or not. */
+export function createValuesToggle(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
+  return createChoiceToggle(
+    'Show metric values',
+    [
+      { value: 'on', label: 'On' },
+      { value: 'off', label: 'Off' },
+    ],
+    page.values ? 'on' : 'off',
+    (shown) => {
+      page.values = shown === 'on';
+      onChange();
+    },
+  );
 }
 
 /** Orientation: landscape or portrait. */

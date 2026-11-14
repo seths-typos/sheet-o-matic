@@ -35,6 +35,25 @@ export function createHeaderPanel(text: HeaderText): HTMLElement {
   info.className = 'body-md header-panel-info';
   info.textContent = 'Optional text, printed across the top of the page.';
 
+  // The title on its own; the note heads the fields beside it.
+  const top = document.createElement('div');
+  top.className = 'header-panel-top';
+  top.append(title);
+
+  const body = document.createElement('div');
+  body.className = 'header-body';
+  body.append(info, createHeaderFields(text));
+
+  panel.append(top, body);
+  return panel;
+}
+
+/**
+ * The three fields alone, without the panel round them: a name and a text
+ * field for each place. Edits `text` in place, calling `onChange` after
+ * each edit.
+ */
+export function createHeaderFields(text: HeaderText, onChange: () => void = () => {}): HTMLElement {
   const fields = document.createElement('div');
   fields.className = 'header-fields';
 
@@ -54,6 +73,7 @@ export function createHeaderPanel(text: HeaderText): HTMLElement {
     input.autocomplete = 'off';
     input.addEventListener('input', () => {
       text[key] = input.value;
+      onChange();
     });
 
     // The rule that draws across under the field while it has focus.
@@ -68,15 +88,5 @@ export function createHeaderPanel(text: HeaderText): HTMLElement {
     fields.append(label, field);
   }
 
-  // The title on its own; the note heads the fields beside it.
-  const top = document.createElement('div');
-  top.className = 'header-panel-top';
-  top.append(title);
-
-  const body = document.createElement('div');
-  body.className = 'header-body';
-  body.append(info, fields);
-
-  panel.append(top, body);
-  return panel;
+  return fields;
 }

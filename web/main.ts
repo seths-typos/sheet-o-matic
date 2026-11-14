@@ -5,6 +5,8 @@ import { applyFontMetrics, readUpload } from './import/read-upload.js';
 import { defaultLineStyles } from './line-styles.js';
 import { ConfigError } from '../src/index.js';
 import type { LabelText } from '../src/render/ops.js';
+import { createLineCard } from './line-card.js';
+import { createPageCard } from './page-card.js';
 import { createRowCard } from './row-card.js';
 import { copyRowState, newRowState, rowInput, rowValues } from './row-input.js';
 import { MAX_ROWS, createChoiceToggle, createRowCountTabs } from './sheet-controls.js';
@@ -57,18 +59,6 @@ function sheetContent(): PreviewSheet | { message: string } {
     if (!(error instanceof ConfigError)) throw error;
     return { message: 'The margin leaves no room for the rows. Try a smaller one.' };
   }
-}
-
-function actionButton(label: string, run?: () => void, variant?: string): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = variant ? `action-button ${variant}` : 'action-button';
-  button.textContent = label;
-  // Read by the stylesheet to hold the width of the label at its hover
-  // weight.
-  button.dataset.label = label;
-  if (run) button.addEventListener('click', run);
-  return button;
 }
 
 /**
@@ -138,10 +128,190 @@ function icon(name: string, d: string): SVGElement {
   return svg;
 }
 
+/**
+ * A button floating over the mat: an icon and its words, or an X and Close
+ * while what it opens is open.
+ */
+function floatButton(d: string, words: string): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'float-button';
+  const label = document.createElement('span');
+  label.className = 'float-button-label';
+  const editLabel = document.createElement('span');
+  editLabel.className = 'label-edit';
+  editLabel.textContent = words;
+  const closeLabel = document.createElement('span');
+  closeLabel.className = 'label-close';
+  closeLabel.textContent = 'Close';
+  label.append(editLabel, closeLabel);
+  button.append(icon('edit', d), icon('close', CROSS), label);
+  return button;
+}
+
+/** Show a floating button as open or not: its X and Close, or its own icon and words. */
+function setFloatOpen(button: HTMLElement, open: boolean): void {
+  button.classList.toggle('is-open', open);
+  button.setAttribute('aria-expanded', String(open));
+  // Its words' cell as wide as the one showing; the stylesheet eases it.
+  const label = button.querySelector<HTMLElement>('.float-button-label')!;
+  const shown = label.querySelector<HTMLElement>(open ? '.label-close' : '.label-edit')!;
+  label.style.width = `${shown.offsetWidth}px`;
+}
+
 /** A pencil: the shaft from tip to cap, then the line where the cap meets it. */
 const PENCIL = 'M3 13l.6-3L10.5 3.1a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4L6 12.4 3 13zM9.4 4.2l2.4 2.4';
+/**
+ * A paintbrush: the handle, a sliver from the top right, then the bristles
+ * swelling from its foot to a tip at the bottom left.
+ */
+const BRUSH =
+  'M13.7 2.3a1.2 1.2 0 0 0-1.7 0L6.6 7.9l2 2 5.2-5.9a1.2 1.2 0 0 0-.1-1.7z' +
+  'M6.6 7.9c-1.7 0-2.9 1.1-3 2.8-.1 1.1-.6 1.9-1.6 2.4 2.8.9 6.1.1 6.6-3.2';
 /** An X. */
 const CROSS = 'M4 4l8 8M12 4l-8 8';
+/** A gear: eight teeth round a rim, then the hole at its middle. */
+const GEAR =
+  'M6.90 3.43L7.21 1.75L8.79 1.75L9.10 3.43L10.46 3.99L11.86 3.02L12.98 4.14L12.01 5.54L12.57 6.90L14.25 7.21L14.25 8.79L12.57 9.10L12.01 10.46L12.98 11.86L11.86 12.98L10.46 12.01L9.10 12.57L8.79 14.25L7.21 14.25L6.90 12.57L5.54 12.01L4.14 12.98L3.02 11.86L3.99 10.46L3.43 9.10L1.75 8.79L1.75 7.21L3.43 6.90L3.99 5.54L3.02 4.14L4.14 3.02L5.54 3.99zM10.1 8a2.1 2.1 0 1 1-4.2 0a2.1 2.1 0 0 1 4.2 0z';
+
+/** Right of the paper, outside it, level with its top: Page Setup. */
+const pageTools = document.createElement('div');
+pageTools.className = 'workspace-page-tools';
+// A gear and Page Setup, a brush and Line Styles: each an X and Close while
+// its card is open.
+const pageSetup = floatButton(GEAR, 'Page Setup');
+pageSetup.setAttribute('aria-label', 'Page setup');
+const lineStyles = floatButton(BRUSH, 'Line Styles');
+lineStyles.setAttribute('aria-label', 'Line styles');
+const sideButtons = document.createElement('div');
+sideButtons.className = 'workspace-side-buttons';
+sideButtons.append(pageSetup, lineStyles);
+/**
+ * The card either button opens, under the two of them: it slides in from
+ * the window's right edge. One at a time; the other button swaps what is
+ * on it.
+ */
+const sideCard = document.createElement('div');
+sideCard.className = 'workspace-side-card';
+sideCard.inert = true;
+pageTools.append(sideButtons, sideCard);
+
+type SideCard = 'page' | 'lines';
+const SIDE_BUTTONS: Record<SideCard, HTMLButtonElement> = { page: pageSetup, lines: lineStyles };
+let sideOpen: SideCard | null = null;
+
+/** Each button as an X while its card is the one open. */
+function markSideButtons(): void {
+  for (const [which, button] of Object.entries(SIDE_BUTTONS)) setFloatOpen(button, which === sideOpen);
+}
+
+/** How long the card takes to slide, in ms. */
+const slideLength = () =>
+  Math.max(...getComputedStyle(sideCard).transitionDuration.split(',').map(parseFloat)) * 1000;
+
+/** How far past the window's edge the card waits, for its shadow, in px. */
+const SLIDE_PAST = 24;
+
+/**
+ * The slide's easing, as the stylesheet has it in --slide-ease: how far
+ * along it is, 0 to 1, at each share of its time.
+ */
+const SLIDE_EASE: [time: number, progress: number][] = [
+  [0, 0],
+  [0.18, 0.596],
+  [0.382, 0.935],
+  [0.482, 1.005],
+  [0.596, 1.0215],
+  [1, 1],
+];
+
+/** The share of the slide's time at which it is first `progress` along. */
+function slideTimeAt(progress: number): number {
+  for (let i = 1; i < SLIDE_EASE.length; i++) {
+    const [t0, p0] = SLIDE_EASE[i - 1]!;
+    const [t1, p1] = SLIDE_EASE[i]!;
+    if (progress <= p1) return t0 + ((progress - p0) / (p1 - p0)) * (t1 - t0);
+  }
+  return 1;
+}
+
+/** Bumped on every open and close, so a slide waited on knows if it was overtaken. */
+let sideTurn = 0;
+
+/** Build a card from the sheet as it stands and slide it in. */
+function slideSideIn(which: SideCard): void {
+  sideCard.replaceChildren(
+    which === 'page'
+      ? createPageCard({ page: sheet.page, header: sheet.header, onReshape: reshape, onChange: () => redraw() })
+      : createLineCard({ styles: sheet.lines, onChange: () => redraw() }),
+  );
+  sideCard.inert = false;
+  // Put where it starts from at once, as the rows' card is: its left edge
+  // at rest to the window's right edge, and a little more for its shadow.
+  sideCard.style.transition = 'none';
+  const left = pageTools.getBoundingClientRect().left + sideCard.offsetLeft;
+  sideCard.style.setProperty('--slide', `${document.documentElement.clientWidth - left + SLIDE_PAST}px`);
+  sideCard.getBoundingClientRect();
+  sideCard.style.transition = '';
+  sideCard.classList.add('is-open');
+}
+
+/**
+ * Open a card. With the other one open, that one slides out first and
+ * this one slides in after it.
+ */
+function openSide(which: SideCard): void {
+  const wasOpen = sideOpen !== null;
+  sideOpen = which;
+  const turn = ++sideTurn;
+  markSideButtons();
+  if (!wasOpen) {
+    slideSideIn(which);
+    return;
+  }
+  sideCard.inert = true;
+  sideCard.classList.remove('is-open');
+  // The next card starts the moment this one is out of sight, not when its
+  // slide ends: the slide runs on past the window's edge and settles
+  // there, a beat with nothing to see.
+  const left = pageTools.getBoundingClientRect().left + sideCard.offsetLeft;
+  const toEdge = document.documentElement.clientWidth - left;
+  const gone = slideTimeAt(toEdge / (toEdge + SLIDE_PAST));
+  setTimeout(() => {
+    if (turn === sideTurn) slideSideIn(which);
+  }, slideLength() * gone);
+}
+
+/** Slide the card away. */
+function closeSide(): void {
+  if (sideOpen === null) return;
+  sideOpen = null;
+  const turn = ++sideTurn;
+  sideCard.inert = true;
+  sideCard.classList.remove('is-open');
+  markSideButtons();
+  // Slid away, the card is emptied, so it takes no room where it waits: a
+  // tall one would otherwise make a short window scroll. After the slide's
+  // length, not on its end, which a hidden tab never reports.
+  setTimeout(() => {
+    if (turn === sideTurn) sideCard.replaceChildren();
+  }, slideLength());
+}
+
+for (const [which, button] of Object.entries(SIDE_BUTTONS) as [SideCard, HTMLButtonElement][]) {
+  button.addEventListener('click', () => {
+    if (sideOpen === which) closeSide();
+    else openSide(which);
+  });
+}
+
+// Escape closes the card, focus going back to its button.
+sideCard.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || sideOpen === null) return;
+  const button = SIDE_BUTTONS[sideOpen];
+  closeSide();
+  button.focus();
+});
 
 /** Which row's metrics card is open, 0-based; null when none is. */
 let editing: number | null = null;
@@ -216,8 +386,7 @@ function closeRow(): void {
 function markRowEdits(): void {
   Array.from(rowEdits.children).forEach((edit, i) => {
     const open = i === editing;
-    edit.classList.toggle('is-open', open);
-    edit.setAttribute('aria-expanded', String(open));
+    setFloatOpen(edit as HTMLElement, open);
     edit.setAttribute('aria-label', open ? `Close row ${i + 1} metrics` : `Edit row ${i + 1} metrics`);
   });
 }
@@ -236,11 +405,9 @@ const RISE_STAGGER = 40;
 
 /** One Edit button, kept from redraw to redraw so it can animate. */
 function createRowEdit(index: number): HTMLButtonElement {
-  const edit = document.createElement('button');
-  edit.type = 'button';
-  edit.className = 'workspace-row-edit';
-  // A pencil, or an X while its card is open.
-  edit.append(icon('edit', PENCIL), icon('close', CROSS));
+  // A pencil and Edit Row, or an X and Close while its card is open.
+  const edit = floatButton(PENCIL, 'Edit row');
+  edit.classList.add('workspace-row-edit');
   edit.addEventListener('click', () => {
     if (editing === index) closeRow();
     else openRow(index);
@@ -287,6 +454,16 @@ function placeRowEdits(content: PreviewSheet): void {
     edit.style.top = `${((row.top + row.bottom) / 2) * scale}px`;
   });
   markRowEdits();
+  // How wide a button is reading Edit Row: its width now, with its words'
+  // cell — which may be mid-change — swapped for those words. The buttons
+  // are placed by it, and the card stands clear of it.
+  const first = rowEdits.firstElementChild as HTMLElement | null;
+  if (first) {
+    const label = first.querySelector<HTMLElement>('.float-button-label')!;
+    const words = first.querySelector<HTMLElement>('.label-edit')!;
+    const width = first.offsetWidth - label.offsetWidth + words.offsetWidth;
+    sheetBox.style.setProperty('--edit-width', `${width}px`);
+  }
   placeCard();
 }
 
@@ -310,19 +487,20 @@ let reshapes = 0;
 function redraw(animate = false): void {
   const content = sheetContent();
   if ('message' in content) {
-    // A value being fixed in the card: the last good sheet stays, faded, so
-    // it can't be mistaken for the values now in the fields.
-    if (editing !== null && frame.parentElement === sheetBox) {
+    message.textContent = content.message;
+    // A value being fixed in a card: the last good sheet stays, faded, so
+    // it can't be mistaken for the values now in the fields, with what's
+    // wrong said over it.
+    if (frame.parentElement === sheetBox) {
       frame.classList.add('is-stale');
+      frame.append(message);
       return;
     }
-    closeRow();
-    message.textContent = content.message;
-    sheetBox.replaceChildren(sheetBar, message);
+    sheetBox.replaceChildren(sheetBar, message, pageTools);
     return;
   }
   if (frame.parentElement !== sheetBox) {
-    sheetBox.replaceChildren(sheetBar, frame, rowEdits, cardSlot);
+    sheetBox.replaceChildren(sheetBar, frame, rowEdits, cardSlot, pageTools);
     // Nothing on screen to change from.
     animate = false;
   }
@@ -332,7 +510,10 @@ function redraw(animate = false): void {
   const barHeight = sheetBar.offsetHeight + parseFloat(getComputedStyle(sheetBox).rowGap);
   drawSheetFitted(paper, { width: stage.clientWidth, height: stage.clientHeight - barHeight }, content, white);
   frame.classList.remove('is-stale');
+  if (message.parentElement === frame) message.remove();
   placeRowEdits(content);
+  // Its words' cell again, in case the web fonts have since loaded.
+  markSideButtons();
 
   const reshape = ++reshapes;
   if (!animate) {
@@ -397,11 +578,7 @@ function render(): void {
       },
     ),
   );
-  sheetBar.replaceChildren(
-    rowControls,
-    // Not wired yet: what it opens is still to be placed.
-    actionButton('Page Setup'),
-  );
+  sheetBar.replaceChildren(rowControls);
 
   // Above everything: the app's name. Upload Config is off the page for
   // now; its dialog stays, unopened.
@@ -427,6 +604,8 @@ function render(): void {
 
 document.querySelector('#app')!.append(uploadDialog.element);
 render();
+// The buttons' words set wider or narrower once the web fonts load.
+void document.fonts.ready.then(() => redraw());
 
 // Shift+G shows the page grid, read live from the grid tokens. Development
 // only; it isn't in a build.
