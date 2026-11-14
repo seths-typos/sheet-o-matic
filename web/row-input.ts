@@ -20,8 +20,9 @@ export function newRowState(): RowState {
   return {
     units: { ...DEFAULT_FONT_UNITS },
     visible: { ascender: true, capHeight: true, xHeight: true, baseline: true, descender: true },
-    // The engine has no default angle, so the italic angle starts at 30°.
-    slant: { enabled: true, angle: 30 },
+    // Upright to start with. The engine has no default angle, so the
+    // italic angle is 30° when it is first switched on.
+    slant: { enabled: false, angle: 30 },
   };
 }
 

@@ -5,10 +5,11 @@ import { applyFontMetrics, readUpload } from './import/read-upload.js';
 import { defaultLineStyles } from './line-styles.js';
 import { ConfigError } from '../src/index.js';
 import type { LabelText } from '../src/render/ops.js';
-import { newRowState, rowInput, rowValues } from './row-input.js';
-import { MAX_ROWS, createRowCountSlider } from './sheet-controls.js';
+import { createRowCard } from './row-card.js';
+import { copyRowState, newRowState, rowInput, rowValues } from './row-input.js';
+import { MAX_ROWS, createChoiceToggle, createRowCountTabs } from './sheet-controls.js';
 import { drawSheetFitted } from './sheet-canvas.js';
-import type { SheetState } from './sheet-file.js';
+import type { RowMetrics, SheetState } from './sheet-file.js';
 import { defaultPageSetup, previewSheet, type PreviewSheet } from './sheet-preview.js';
 import { createUploadDialog } from './upload-dialog.js';
 import type { UploadFile } from './upload.js';
@@ -119,6 +120,181 @@ const paper = document.createElement('canvas');
 frame.append(paper);
 const message = document.createElement('p');
 message.className = 'body-md workspace-preview-message';
+/** Left of the paper, outside it: an Edit button level with each row. */
+const rowEdits = document.createElement('div');
+rowEdits.className = 'workspace-row-edits';
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+/** An icon of one path, drawn in the button's colour. */
+function icon(name: string, d: string): SVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add(`icon-${name}`);
+  const path = document.createElementNS(SVG, 'path');
+  path.setAttribute('d', d);
+  svg.append(path);
+  return svg;
+}
+
+/** A pencil: the shaft from tip to cap, then the line where the cap meets it. */
+const PENCIL = 'M3 13l.6-3L10.5 3.1a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4L6 12.4 3 13zM9.4 4.2l2.4 2.4';
+/** An X. */
+const CROSS = 'M4 4l8 8M12 4l-8 8';
+
+/** Which row's metrics card is open, 0-based; null when none is. */
+let editing: number | null = null;
+
+/**
+ * The metrics card, left of the Edit buttons: a slot in the paper's cell
+ * as theirs is, and in it the card, which slides in from the window's left
+ * edge and back out. Its contents are built for the row it opens on.
+ */
+const cardSlot = document.createElement('div');
+cardSlot.className = 'workspace-row-card-slot';
+const card = document.createElement('div');
+card.className = 'workspace-row-card';
+card.inert = true;
+cardSlot.append(card);
+
+/**
+ * Level with its row's Edit button, kept inside the stage; and how far left
+ * it has to go to be out of the window.
+ */
+function placeCard(): void {
+  if (editing === null) return;
+  const edit = rowEdits.children[editing] as HTMLElement | undefined;
+  if (!edit) return;
+  const slot = cardSlot.getBoundingClientRect();
+  const bounds = stage.getBoundingClientRect();
+  const height = card.offsetHeight;
+  const highest = bounds.top - slot.top;
+  const lowest = bounds.bottom - slot.top - height;
+  const centred = parseFloat(edit.style.top) - height / 2;
+  card.style.top = `${Math.max(highest, Math.min(lowest, centred))}px`;
+  // Its right edge at rest, from the window's left, and a little more for
+  // its shadow.
+  card.style.setProperty('--slide', `${-(slot.left + card.offsetLeft + card.offsetWidth + 24)}px`);
+}
+
+/** Open a row's metrics card; one already open moves to the new row. */
+function openRow(index: number): void {
+  // With shared metrics row 1's state is every row's.
+  const state = sheet.metrics === 'same' ? sheet.rows[0]! : sheet.rows[index]!;
+  editing = index;
+  card.replaceChildren(
+    createRowCard({ row: index + 1, state, styles: sheet.lines, onChange: () => redraw() }),
+  );
+  card.inert = false;
+  if (!card.classList.contains('is-open')) {
+    // Put where it starts from at once, not eased there: a start still
+    // on its way from somewhere further off — the far side of the window,
+    // the first time — would make the slide longer, so faster, and its
+    // overshoot bigger.
+    card.style.transition = 'none';
+    placeCard();
+    card.getBoundingClientRect();
+    card.style.transition = '';
+  } else {
+    placeCard();
+  }
+  card.classList.add('is-open');
+  markRowEdits();
+}
+
+/** Slide the card away. Its contents stay until it is next opened. */
+function closeRow(): void {
+  if (editing === null) return;
+  editing = null;
+  card.inert = true;
+  card.classList.remove('is-open');
+  markRowEdits();
+}
+
+/** Each Edit button as an X while its row's card is open. */
+function markRowEdits(): void {
+  Array.from(rowEdits.children).forEach((edit, i) => {
+    const open = i === editing;
+    edit.classList.toggle('is-open', open);
+    edit.setAttribute('aria-expanded', String(open));
+    edit.setAttribute('aria-label', open ? `Close row ${i + 1} metrics` : `Edit row ${i + 1} metrics`);
+  });
+}
+
+// Escape closes the card, focus going back to the button that opened it.
+card.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || editing === null) return;
+  const edit = rowEdits.children[editing] as HTMLElement | undefined;
+  closeRow();
+  edit?.focus();
+});
+
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
+/** Each row's rise or landing starts this long after the row above's, in ms. */
+const RISE_STAGGER = 40;
+
+/** One Edit button, kept from redraw to redraw so it can animate. */
+function createRowEdit(index: number): HTMLButtonElement {
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'workspace-row-edit';
+  // A pencil, or an X while its card is open.
+  edit.append(icon('edit', PENCIL), icon('close', CROSS));
+  edit.addEventListener('click', () => {
+    if (editing === index) closeRow();
+    else openRow(index);
+  });
+  // The rise over, hover answers at once again.
+  edit.addEventListener('animationend', () => edit.classList.remove('is-rising'));
+  return edit;
+}
+
+/**
+ * An Edit button for each row drawn, centred on its band at the paper's
+ * scale. With shared metrics only row 1's is active: the rest follow it.
+ * The buttons are kept and updated in place, so one switched on rises off
+ * the mat and one switched off lands on it, each a moment after the one
+ * above it.
+ */
+function placeRowEdits(content: PreviewSheet): void {
+  const { sheet: drawn } = content;
+  const scale = parseFloat(paper.style.width) / drawn.page.width;
+  const edits = Array.from(rowEdits.children) as HTMLButtonElement[];
+  for (const edit of edits.splice(drawn.rows.length)) edit.remove();
+  // A row no longer there, or now following row 1, has nothing to edit.
+  if (editing !== null && (editing >= drawn.rows.length || (sheet.metrics === 'same' && editing > 0))) {
+    closeRow();
+  }
+
+  // How many have started moving this redraw: each waits its turn.
+  let moving = 0;
+  drawn.rows.forEach((row, i) => {
+    let edit = edits[i];
+    const disabled = sheet.metrics === 'same' && row.index > 0;
+    if (!edit) {
+      edit = createRowEdit(row.index);
+      edit.disabled = disabled;
+      rowEdits.append(edit);
+    } else if (edit.disabled !== disabled) {
+      edit.classList.remove('is-rising', 'is-landing');
+      if (!REDUCED_MOTION.matches) {
+        edit.style.setProperty('--rise-delay', `${moving++ * RISE_STAGGER}ms`);
+        edit.classList.add(disabled ? 'is-landing' : 'is-rising');
+      }
+      edit.disabled = disabled;
+    }
+    edit.style.top = `${((row.top + row.bottom) / 2) * scale}px`;
+  });
+  markRowEdits();
+  placeCard();
+}
+
+/** Hide the drawing and the Edit buttons while the paper changes shape. */
+function setReshaping(on: boolean): void {
+  frame.classList.toggle('is-reshaping', on);
+  sheetBox.classList.toggle('is-reshaping', on);
+}
 
 /** Bumped on every reshape, so only the latest one fades the sheet back in. */
 let reshapes = 0;
@@ -134,12 +310,19 @@ let reshapes = 0;
 function redraw(animate = false): void {
   const content = sheetContent();
   if ('message' in content) {
+    // A value being fixed in the card: the last good sheet stays, faded, so
+    // it can't be mistaken for the values now in the fields.
+    if (editing !== null && frame.parentElement === sheetBox) {
+      frame.classList.add('is-stale');
+      return;
+    }
+    closeRow();
     message.textContent = content.message;
     sheetBox.replaceChildren(sheetBar, message);
     return;
   }
   if (frame.parentElement !== sheetBox) {
-    sheetBox.replaceChildren(sheetBar, frame);
+    sheetBox.replaceChildren(sheetBar, frame, rowEdits, cardSlot);
     // Nothing on screen to change from.
     animate = false;
   }
@@ -148,10 +331,12 @@ function redraw(animate = false): void {
   // The stage's height less the bar's and the gap under it.
   const barHeight = sheetBar.offsetHeight + parseFloat(getComputedStyle(sheetBox).rowGap);
   drawSheetFitted(paper, { width: stage.clientWidth, height: stage.clientHeight - barHeight }, content, white);
+  frame.classList.remove('is-stale');
+  placeRowEdits(content);
 
   const reshape = ++reshapes;
   if (!animate) {
-    frame.classList.remove('is-reshaping');
+    setReshaping(false);
     frame.classList.add('is-instant');
     frame.style.width = paper.style.width;
     frame.style.height = paper.style.height;
@@ -160,14 +345,14 @@ function redraw(animate = false): void {
     frame.classList.remove('is-instant');
     return;
   }
-  frame.classList.add('is-reshaping');
+  setReshaping(true);
   frame.style.width = paper.style.width;
   frame.style.height = paper.style.height;
   // Fade the sheet in once the frame has its new shape: after the reshape's
   // length, so a hidden tab, which runs no transitions, still shows it.
   const length = Math.max(...getComputedStyle(frame).transitionDuration.split(',').map(parseFloat)) * 1000;
   setTimeout(() => {
-    if (reshape === reshapes) frame.classList.remove('is-reshaping');
+    if (reshape === reshapes) setReshaping(false);
   }, length);
 }
 
@@ -185,38 +370,47 @@ new ResizeObserver(() => {
 
 /** Build the page from the sheet, replacing what was there. */
 function render(): void {
-  // Over the paper: how many rows on the left, the page's setup on the
-  // right.
-  sheetBar.replaceChildren(
-    createRowCountSlider(sheet.rowCount, (count) => {
+  // Over the paper: how many rows and whether they share their metrics on
+  // the left, the page's setup on the right.
+  const rowControls = document.createElement('div');
+  rowControls.className = 'workspace-sheet-controls';
+  rowControls.append(
+    createRowCountTabs(sheet.rowCount, (count) => {
       sheet.rowCount = count;
       redraw();
     }),
+    createChoiceToggle<RowMetrics>(
+      'Metrics across rows',
+      [
+        { value: 'same', label: 'Same' },
+        { value: 'different', label: 'Different' },
+      ],
+      sheet.metrics,
+      (metrics) => {
+        // Going individual, every row starts from the metrics they shared.
+        if (metrics === 'different') {
+          const shared = sheet.rows[0]!;
+          sheet.rows = sheet.rows.map((row, i) => (i === 0 ? row : copyRowState(shared)));
+        }
+        sheet.metrics = metrics;
+        redraw();
+      },
+    ),
+  );
+  sheetBar.replaceChildren(
+    rowControls,
     // Not wired yet: what it opens is still to be placed.
     actionButton('Page Setup'),
   );
 
-  // Bringing a config or a font in, at the top right.
-  const inbound = document.createElement('div');
-  inbound.className = 'sheet-actions is-inbound';
-  // What it takes, beside it, so the button needn't be opened to find out.
-  const inboundNote = document.createElement('p');
-  inboundNote.className = 'body-sm sheet-actions-note';
-  inboundNote.id = 'upload-note';
-  inboundNote.textContent =
-    'Drop in a .glyphs, .ufo or Sheet-o-matic config to set up your sheet automatically.';
-  const uploadButton = actionButton('Upload Config', () => uploadDialog.open());
-  uploadButton.setAttribute('aria-describedby', inboundNote.id);
-
-  inbound.append(inboundNote, uploadButton);
-
-  // Above everything: the app's name centred, Upload Config on the right.
+  // Above everything: the app's name. Upload Config is off the page for
+  // now; its dialog stays, unopened.
   const appTitle = document.createElement('h1');
   appTitle.className = 'heading-h1 app-title';
   appTitle.textContent = 'Sheet-o-matic';
   const topBar = document.createElement('header');
   topBar.className = 'app-header';
-  topBar.append(appTitle, inbound);
+  topBar.append(appTitle);
 
   // The top bar, then the sheet on the mat. The controls are being placed
   // again; until they are, the sheet is drawn as it stands.

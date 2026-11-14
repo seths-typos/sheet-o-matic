@@ -107,16 +107,32 @@ export function createStopSlider(
   return control;
 }
 
-/** "Number of rows": a stop for each count, 1 to 6, numbered underneath. */
-export function createRowCountSlider(
+/**
+ * "Number of rows": a tab for each count, 1 to 6, the thumb under the
+ * chosen one.
+ */
+export function createRowCountTabs(
   value: number,
   onChange: (count: number) => void,
 ): HTMLElement {
-  const stops = Array.from({ length: MAX_ROWS - MIN_ROWS + 1 }, (_, i) => {
-    const n = MIN_ROWS + i;
-    return { value: n, label: String(n) };
-  });
-  return createStopSlider('Number of rows', stops, value, onChange);
+  const counts = Array.from({ length: MAX_ROWS - MIN_ROWS + 1 }, (_, i) => String(MIN_ROWS + i));
+  const control = createChoiceToggle(
+    'Number of rows',
+    counts.map((count) => ({ value: count, label: count })),
+    String(value),
+    (count) => {
+      place(count);
+      onChange(Number(count));
+    },
+  );
+  control.classList.add('count-toggle');
+  // Read by the stylesheet: how many tabs share the shell, and which the
+  // thumb sits under.
+  const shell = control.querySelector<HTMLElement>('.choice')!;
+  shell.style.setProperty('--options', String(counts.length));
+  const place = (count: string) => shell.style.setProperty('--chosen', String(counts.indexOf(count)));
+  place(String(value));
+  return control;
 }
 
 export interface Choice<T extends string> {

@@ -67,6 +67,8 @@ body {
   --field-value: 38px;
   --field-unit: 24px;
   --drawer: calc(var(--field-value) + var(--field-unit));
+  /* The button's width: square unless something widens it. */
+  --button: var(--diameter);
 
   position: relative;
   display: flex;
@@ -106,7 +108,7 @@ body {
 .metric-control {
   position: relative;
   flex: none;
-  width: calc(var(--diameter) + var(--drawer));
+  width: calc(var(--button) + var(--drawer));
   height: var(--diameter);
 }
 
@@ -129,7 +131,7 @@ body {
   display: grid;
   place-items: center;
   flex: none;
-  width: var(--diameter);
+  width: var(--button);
   height: var(--diameter);
   padding: 0;
   border: none;
@@ -203,7 +205,7 @@ body {
   top: 0;
   /* Tucked 1px under the button: edge to edge, the two anti-alias against
      each other on a fractional pixel and leave a hairline of red between. */
-  left: calc(var(--diameter) - 1px);
+  left: calc(var(--button) - 1px);
   width: calc(var(--drawer) + 1px);
   height: var(--diameter);
   overflow: hidden;
@@ -3379,6 +3381,33 @@ body {
   padding-left: 0;
 }
 
+/* Number of rows: a tab for each count, as Weight's bars. The thumb is one
+   tab wide and steps a tab at a time; --options and --chosen are set on
+   the shell by the control. The numbers go without lamps: the thumb marks
+   the choice. */
+.count-toggle .choice::after {
+  width: calc(100% / var(--options));
+}
+
+/* As specific as the two-way toggle's step to its last option, and after
+   it, so the last tab's thumb lands here too. */
+.count-toggle .choice:has(.choice-option input:checked)::after {
+  translate: calc(100% * var(--chosen));
+}
+
+.count-toggle .choice-option {
+  min-width: 28px;
+  padding: 0;
+}
+
+.count-toggle .choice-option > span::before {
+  display: none;
+}
+
+.count-toggle .choice-option::after {
+  padding-left: 0;
+}
+
 /* Title to cards the same in Metrics as in Line Styles: 32px, a margin-md,
    from a title's baseline to its cards' top line. Metrics was 42px, its
    header's bottom padding and the block's row gap adding up past it, so
@@ -3442,6 +3471,246 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--spacers-margin-lg);
+}
+
+/* The rows' two controls side by side at the bar's left. */
+.workspace-sheet-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacers-margin-md);
+}
+
+/* White inside the bar's toggles, as the paper under them. */
+.workspace-sheet-bar .choice {
+  --toggle-ground: var(--color-white);
+}
+
+/* An Edit button for each row, on the mat a gutter to the paper's left,
+   level with the middle of the row: a box in the paper's cell with no
+   width, the buttons hanging off its left edge. Hidden while the paper
+   changes shape, fading in with the drawing. */
+.workspace-sheet > .workspace-paper,
+.workspace-sheet > .workspace-preview-message {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.workspace-row-edits {
+  position: relative;
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: start;
+  width: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.workspace-sheet.is-reshaping .workspace-row-edits {
+  opacity: 0;
+  transition: none;
+}
+
+/* A circle outlined in the ink, white inside it as the paper is, a pencil
+   in the ink; filled with the ink on hover, the pencil in white. Floating
+   over the mat as the paper does, its shadow from the same light, scaled
+   to the button. */
+.workspace-row-edit {
+  position: absolute;
+  right: var(--grid-gutter);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: var(--border-thick) solid var(--ink);
+  border-radius: 50%;
+  background: var(--color-white);
+  color: var(--ink);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.12),
+    2px 5px 8px rgb(0 0 0 / 0.2);
+  translate: 0 -50%;
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out,
+    box-shadow 300ms ease-out,
+    transform 100ms ease-out;
+}
+
+/* Pressed, it shrinks by a tenth, as if pushed down toward the mat, its
+   shadow closing under it; released, it comes back up. As a transform, to
+   leave `scale` to the rise and the landing. */
+.workspace-row-edit:enabled:active {
+  box-shadow:
+    0 1px 1px rgb(0 0 0 / 0.1),
+    1px 2px 3px rgb(0 0 0 / 0.14);
+  transform: scale(0.9);
+  transition-duration: 100ms;
+}
+
+.workspace-row-edit:enabled:hover {
+  background: var(--ink);
+  color: var(--color-white);
+}
+
+/* A row that follows row 1's metrics: greyed out and nearer the mat, a
+   little smaller with a small, close shadow. Landing there is a plain
+   ease with no spring — it can't sink past the mat — and quicker than
+   rising. */
+.workspace-row-edit:disabled {
+  border-color: var(--color-ui-disabled);
+  background: var(--color-bg);
+  box-shadow:
+    0 1px 1px rgb(0 0 0 / 0.1),
+    1px 2px 3px rgb(0 0 0 / 0.14);
+  color: var(--color-ui-disabled);
+  scale: 0.94;
+  cursor: default;
+  transition:
+    background 150ms ease-out,
+    border-color 150ms ease-out,
+    color 150ms ease-out,
+    box-shadow 200ms ease-out,
+    scale 200ms ease-out;
+}
+
+/* Each row lands --rise-delay after the one above. */
+.workspace-row-edit.is-landing {
+  transition-delay: var(--rise-delay, 0ms);
+}
+
+/* Switched on, a button rises off the mat: its colour comes first, then
+   its shadow grows out from under it as it swells from its lower size a
+   little past its full one and springs back. Each row starts --rise-delay
+   after the one above. */
+.workspace-row-edit.is-rising {
+  transition-delay: var(--rise-delay, 0ms);
+  animation: row-edit-rise 320ms cubic-bezier(0.3, 0, 0.3, 1) var(--rise-delay, 0ms) backwards;
+}
+
+@keyframes row-edit-rise {
+  0% { scale: 0.94; }
+  45% { scale: 1.08; }
+  75% { scale: 0.985; }
+  100% { scale: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-row-edit {
+    scale: 1;
+  }
+
+  .workspace-row-edit.is-rising {
+    animation: none;
+  }
+}
+
+/* A pencil, or an X while the row's card is open. */
+.workspace-row-edit .icon-close,
+.workspace-row-edit.is-open .icon-edit {
+  display: none;
+}
+
+.workspace-row-edit.is-open .icon-close {
+  display: block;
+}
+
+/* On the card each On/Off button is wider, for a lamp before its word, as
+   the choice toggles have: a ring when off, filled when on, in the word's
+   colour, a pixel larger than theirs. Raised off the baseline so its middle meets the caps' middle. */
+.row-card .metric-toggle {
+  --button: 38px;
+}
+
+.row-card .toggle > span {
+  white-space: nowrap;
+}
+
+.row-card .toggle > span::before {
+  content: '';
+  display: inline-block;
+  /* 6px, and on a whole pixel: at 5px, or straddling two pixel rows, a
+     filled dot this small comes out square. */
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  vertical-align: round(calc((1cap - 6px) / 2), 1px);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px currentColor;
+  transition: background 160ms ease;
+}
+
+/* Filled, the ring goes: drawn over the fill it doubles up the dot's soft
+   edge, which squares its corners. */
+.row-card .toggle[aria-pressed="true"] > span::before {
+  background: currentColor;
+  box-shadow: none;
+}
+
+/* The row's metrics card, on the mat left of the Edit buttons, a gutter
+   from them: a slot in the paper's cell with no width, as theirs is, the
+   card hanging off its left edge at the height its row's button sets. It
+   slides in from the window's left edge, --slide away, running a little
+   past its place and settling back, and slides out the same way. It
+   floats level with the Edit buttons, so it casts their shadow — drawn
+   round the frame's cut corners, as a filter. */
+.workspace-row-card-slot {
+  position: relative;
+  grid-row: 2;
+  grid-column: 1;
+  justify-self: start;
+  width: 0;
+}
+
+.workspace-row-card {
+  position: absolute;
+  right: calc(2 * var(--grid-gutter) + 32px);
+  width: max-content;
+  filter:
+    drop-shadow(0 1px 2px rgb(0 0 0 / 0.12))
+    drop-shadow(2px 5px 8px rgb(0 0 0 / 0.2));
+  translate: var(--slide, -100vw) 0;
+  visibility: hidden;
+  --slide-ease: linear(0, 0.596 18%, 0.935 38.2%, 1.005 48.2%, 1.0215 59.6%, 1);
+  transition:
+    translate 350ms var(--slide-ease),
+    visibility 0s 350ms;
+}
+
+.workspace-row-card.is-open {
+  translate: 0 0;
+  visibility: visible;
+  transition:
+    translate 350ms var(--slide-ease),
+    top 350ms var(--slide-ease);
+}
+
+/* The last good sheet, faded, while a value in the card is being fixed. */
+.workspace-paper.is-stale canvas {
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-row-card,
+  .workspace-row-card.is-open {
+    transition: none;
+  }
+}
+
+.workspace-row-edit:focus-visible {
+  outline: var(--border-thick) solid var(--ink);
+  outline-offset: 2px;
+}
+
+.workspace-row-edit svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* The paper: its white and shadow, sized to the sheet. It changes shape

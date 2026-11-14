@@ -60,6 +60,15 @@ A line the font lacks, or has out of the editor's order (an ascender on the cap 
 **Open:**
 - The row gap value, and whether it scales with row count. Deferred — use the current default until decided.
 
+**To do — back onto the page.** The `frontend-overhaul` rebuild (2026-10-27) shows the row count, Metrics Across Rows and a live preview, with an Edit button beside each row that slides in its metrics card (`web/row-card.ts`). Everything below is on `main`'s page and still in `web/`, unmounted, waiting for a place:
+- Line Styles: weight, dash and colour.
+- Page Setup: the button is there and opens nothing. Its controls are split out and redraw the preview (`createPageSetupControls`).
+- Header text: left, centre, right.
+- Print, Save to PDF, Save Config.
+- Upload Config: taken off the page 2026-11-13. The dialog and `load` stay in `web/main.ts`; nothing opens them.
+- The credit link.
+- The Preview button and the per-row previews are probably replaced by the live preview — to confirm.
+
 ## Tech stack
 
 - Language: TypeScript. Confirmed — the same geometry code will later run in the browser for canvas preview.
