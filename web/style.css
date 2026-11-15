@@ -8,48 +8,6 @@ body {
   background: var(--color-bg);
 }
 
-/* One row's editor: its number above its preview card, centred on it. */
-.row-editor {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: fit-content;
-}
-
-.row-editor-title {
-  margin: 0 0 var(--spacers-padding-xs);
-  color: var(--ink, var(--color-text-onlight));
-}
-
-/* A part of a row's editor, such as its Metrics. Full width, so a section
-   without toggles ("Same as Row 1") still lines up with the card's left
-   edge. */
-.row-section {
-  display: flex;
-  flex-direction: column;
-  align-self: stretch;
-}
-
-/* Row preview card, "Active" state. Values from Figma node 292:1547. */
-.row-preview {
-  /* Size is set inline: the width matched to the controls below it, the
-     height from CARD in row-preview.ts. */
-  border-radius: var(--corner-xs);
-  background: var(--color-bg-contrast);
-  overflow: hidden;
-}
-
-/* The card's border, drawn last in its SVG so it always covers the lines'
-   ends; see BORDER in row-preview.ts. */
-.row-preview-border {
-  fill: none;
-  stroke: var(--ink, var(--color-black));
-}
-
-.row-preview svg {
-  display: block;
-}
-
 /* Metric toggle: the metric's name, then a 24px round on/off button, the
    name centred on the button. A rule runs over the name and on along the
    button's top edge. */
@@ -273,12 +231,6 @@ body {
   color: var(--ink-contrast);
 }
 
-/* The last good preview while a value is invalid: still there, plainly not
-   current. */
-.row-editor.is-stale .row-preview {
-  opacity: 0.35;
-}
-
 /* A toggle with the line under it that says what's wrong with its value.
    The line takes no room until there is something to say. */
 .metric-item {
@@ -353,9 +305,7 @@ body {
 }
 
 /* Each row of the page across all twelve columns. */
-.app-header,
-.metrics-block,
-.sheet-footer {
+.app-header {
   grid-column: 1 / -1;
 }
 
@@ -522,15 +472,6 @@ body {
   gap: var(--spacers-padding-xs);
 }
 
-/* The row editors, all six side by side on one line. They keep their
-   width rather than squeeze to fit; a narrow window scrolls. */
-/* The six row editors, two page columns each, a gutter apart. */
-.row-editors {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: var(--grid-gutter);
-}
-
 /* A row editor's frame fits its contents a little closer than other frames,
    so a row fits two page columns. */
 .editor.frame {
@@ -539,60 +480,16 @@ body {
 
 /* Rows and their Metrics sections are fieldsets, to be disabled in one
    step. Drop the browser's fieldset frame and spacing. */
-.editor,
-.row-section {
+.editor {
   min-inline-size: 0;
   margin: 0;
   border: 0;
 }
 
-.row-section {
-  padding: 0;
-}
-
-/* Disabled: past the row count, the whole row; following row 1, its
-   toggles. 0.7 opacity leaves white on the red at 3.2:1 — under the 4.5:1
-   text minimum, which disabled controls are exempt from, but still clear of
-   the 3:1 for large text and non-text. Not both at once: a following row
-   past the count dims once, not twice. */
-.editor.is-inactive > :not(.row-editor),
-.editor.is-inactive .row-editor > :not(.row-editor-title),
-.editor:not(.is-inactive) .row-section.is-following .metric-controls {
-  opacity: 0.7;
-}
-
-/* The title's background is what breaks the frame line behind it, so it
-   stays solid: only the text dims, or the line would show through. */
-.editor.is-inactive .row-editor-title {
-  color: rgb(from var(--ink) r g b / 0.7);
-}
-
-/* A row past the count dims its frame further still, so the row as a whole
-   reads as set aside. The frame is decoration, not a control's edge, so no
-   contrast minimum applies. Only the white shape fades: the red one inside
-   it stays solid, and the frame's 2px band shows the panel through. */
-.editor.is-inactive::before {
-  opacity: 0.35;
-}
-
 /* The dimming eases rather than snapping, alongside the preview powering. */
 .editor > :not(.row-editor),
-.row-editor > *,
-.editor::before,
-.row-section .metric-controls {
+.editor::before {
   transition: opacity 300ms ease-out, color 300ms ease-out;
-}
-
-/* A row switching on or off with the row count: its lines fade up, or drop
-   away with a last flicker like a screen going off. Only the lines; the card
-   stays put. On mirrors off's fade — same length, easing out where it eases
-   in — without the flicker. */
-.row-preview.is-powering-on .row-preview-lines {
-  animation: screen-on 320ms ease-out;
-}
-
-.row-preview.is-powering-off .row-preview-lines {
-  animation: screen-off 320ms ease-in forwards;
 }
 
 @keyframes screen-on {
@@ -609,14 +506,12 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .editor > *,
-  .editor::before,
-  .row-section .metric-controls {
+.editor::before {
     transition: none;
   }
 }
 
-.editor:disabled *,
-.row-section:disabled * {
+.editor:disabled * {
   cursor: default;
 }
 
@@ -709,227 +604,7 @@ body {
   --shape-soft: var(--soft);
 }
 
-/* Outlined: the block is --edge-color, and ::after lays the page's colour over it,
-   inset by the edge, leaving the edge showing. The inner shape's cut is
-   smaller by edge × (2 − √2), so the diagonals are as thick as the sides,
-   and its rounding tighter by the edge, so the curves run parallel. */
-.block.is-outlined {
-  --ink: var(--color-black);
-  --ink-contrast: var(--color-bg);
-  --paper: var(--color-bg);
-  /* The edge's colour, apart from the ink inside. Clear: no outline. */
-  --edge-color: transparent;
-  /* Heavier than the rules inside, to hold the shape. */
-  --edge: calc(var(--border-thick) * 2);
-
-  background: var(--edge-color);
-  /* Text in black: only the lines and fills take the ink. */
-  color: var(--color-black);
-}
-
-.is-outlined .sheet-control,
-.is-outlined .choice-option {
-  color: var(--color-black);
-}
-
-/* The slider's handle in black too, with the text rather than the lines. */
-.is-outlined .stop-slider-input::-webkit-slider-thumb {
-  background: var(--color-black);
-}
-
-.is-outlined .stop-slider-input::-moz-range-thumb {
-  background: var(--color-black);
-}
-
-.block.is-outlined::after {
-  --shape-bevel: calc(var(--bevel) - var(--edge) * 0.5858);
-  --shape-soft: calc(var(--soft) - var(--edge));
-
-  content: '';
-  position: absolute;
-  inset: var(--edge);
-  z-index: -1;
-  background: var(--paper);
-  clip-path: var(--block-shape);
-}
-
-/* The title's notch, just past the top-left bevel: the page's colour, wide
-   at the top edge and narrowing at 45° to a floor --d down, the title
-   centred in it and inked as on the page. Its corners are softened as the
-   block's are. The two where the slopes leave the top edge round the
-   block's corner, so the notch reaches --soft-t further out on each side to
-   fill in behind those curves.
-
-   The shape is --notch-shape: slopes leaving the top edge --ns in from
-   either end of the element, and a floor --nd down. */
-.block-title,
-.block-title::before {
-  --notch-shape: polygon(
-    /* left: off the top edge, then down onto the floor */
-    calc(var(--ns) - var(--soft-t)) 0,
-    calc(var(--ns) - var(--soft-m1)) var(--soft-m2),
-    calc(var(--ns) + var(--soft-d)) var(--soft-d),
-    calc(var(--ns) + var(--nd) - var(--soft-d)) calc(var(--nd) - var(--soft-d)),
-    calc(var(--ns) + var(--nd) + var(--soft-m1)) calc(var(--nd) - var(--soft-m2)),
-    calc(var(--ns) + var(--nd) + var(--soft-t)) var(--nd),
-    /* right: off the floor, then up onto the top edge */
-    calc(100% - var(--ns) - var(--nd) - var(--soft-t)) var(--nd),
-    calc(100% - var(--ns) - var(--nd) - var(--soft-m1)) calc(var(--nd) - var(--soft-m2)),
-    calc(100% - var(--ns) - var(--nd) + var(--soft-d)) calc(var(--nd) - var(--soft-d)),
-    calc(100% - var(--ns) - var(--soft-d)) var(--soft-d),
-    calc(100% - var(--ns) + var(--soft-m1)) var(--soft-m2),
-    calc(100% - var(--ns) + var(--soft-t)) 0
-  );
-}
-
-.block-title {
-  --ink: var(--color-black);
-  --ink-contrast: var(--color-mist);
-  --paper: var(--color-bg);
-  --s: var(--soft-t);
-  --d: var(--notch-depth);
-  --ns: var(--s);
-  --nd: var(--d);
-
-  position: absolute;
-  top: 0;
-  left: calc(var(--bevel) + var(--spacers-padding-lg) - var(--s));
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  height: var(--d);
-  margin: 0;
-  padding-inline: calc(var(--s) + var(--d) + var(--spacing-3));
-  background: var(--paper);
-  color: var(--ink);
-  text-box: trim-both cap alphabetic;
-  clip-path: var(--notch-shape);
-}
-
-/* In an outlined block the notch has an edge too. The title becomes that
-   edge — the notch grown outward by --edge: its floor that much lower, its
-   slopes edge × √2 further out along the top — and ::before is the notch
-   itself on top, in the page's colour. The title box widens by the same
-   amount each side, so the notch stays where it was. */
-.is-outlined .block-title {
-  --grow: calc(var(--edge) * 1.4142);
-  --nd: calc(var(--d) + var(--edge));
-
-  left: calc(var(--bevel) + var(--spacers-padding-lg) - var(--s) - var(--grow));
-  height: calc(var(--d) + var(--edge));
-  padding-inline: calc(var(--grow) + var(--s) + var(--d) + var(--spacing-3));
-  padding-bottom: var(--edge);
-  background: var(--edge-color);
-  /* So the notch, at z-index -1, stays over this rather than under it. */
-  isolation: isolate;
-}
-
-.is-outlined .block-title::before {
-  --ns: calc(var(--s) + var(--grow));
-  --nd: var(--d);
-
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--paper);
-  clip-path: var(--notch-shape);
-}
-
-/* Row Metrics: the title, the sheet's controls and the row editors, on
-   the page itself, inked in black, between two rules that run the width of
-   the window.
-
-   The rules are a border image drawn on the top and bottom borders only,
-   pushed out past both sides by a window's width. Border image overflow
-   paints but takes no room, so the page doesn't scroll for it. No corner
-   cuts: the rules are its edges now. */
-.metrics-block {
-  --ink: var(--color-black);
-  --paper: var(--color-bg);
-  --rule: var(--border-thick);
-
-  border-block: var(--rule) solid transparent;
-  border-image: linear-gradient(var(--color-steel) 0 0) 1 / var(--rule) 0 / 0 100vw;
-  clip-path: none;
-
-  /* The rows sit close to the sides; the corner cuts clear them above and
-     below. */
-  padding-inline: var(--spacers-padding-md);
-
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacers-padding-md);
-}
-
-/* The title is out of the flow, in its notch, so the controls are pushed
-   over to the right themselves, and kept as clear of the top-right bevel as
-   the title is of the top-left. */
-/* Without a notch, the title is back in the header's row: flush with the
-   rows' left edge and centred on the controls' height, the controls flush
-   with the rows' right edge. */
-.metrics-block .block-title {
-  position: static;
-  height: auto;
-  padding: 0;
-  background: none;
-  clip-path: none;
-}
-
-.metrics-block .sheet-controls {
-  margin-left: auto;
-}
-
-/* On the block the controls' names sit to their left rather than above,
-   centred on the slider's track and the toggle, to keep the header short. */
-.metrics-block .sheet-control {
-  flex-direction: row;
-  align-items: flex-start;
-  gap: var(--spacers-padding-sm);
-}
-
-.metrics-block .sheet-control-name {
-  /* Capitals centred on the 24px of the thumb and the toggle. */
-  margin-top: calc(12px - 0.5cap);
-  text-box: trim-both cap alphabetic;
-}
-
 /* ── Header ───────────────────────────────────────────── */
-
-/* Under the rows: Line Styles, then Header filling the rest of the line. */
-/* Under the rows, on the page's own columns: Line Styles across seven,
-   Header across four, Output in the last. */
-.sheet-footer {
-  display: grid;
-  grid-template-columns: subgrid;
-}
-
-.line-styles {
-  grid-column: span 7;
-}
-
-.header-panel {
-  grid-column: span 4;
-}
-
-.output-block {
-  grid-column: span 1;
-}
-
-/* Header, an outlined block like Line Styles beside it. Nothing sits
-   beside its title either, so its contents start below the notch. */
-.header-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacers-padding-md);
-  padding-top: calc(var(--notch-depth) + var(--spacers-padding-md));
-}
-
-/* Under the notch, over the fields. */
-.header-panel-info {
-  margin: 0;
-  color: var(--color-black);
-}
 
 /* A name, then its field, the names in a column of their own. */
 .header-fields {
@@ -1011,28 +686,6 @@ body {
 
 /* ── Sheet controls ───────────────────────────────────── */
 
-/* Above the rows: the title on the left, the sheet's controls — how many
-   rows, and whether they share metrics — on the right, the two centred on
-   each other. */
-.sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  align-self: stretch;
-  gap: var(--spacers-margin-lg);
-}
-
-.sheet-title {
-  margin: 0;
-  color: var(--ink);
-}
-
-.sheet-controls {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacers-margin-lg);
-}
-
 /* A control's name above it. */
 .sheet-control {
   --rule: var(--border-thick);
@@ -1042,117 +695,6 @@ body {
   flex-direction: column;
   gap: var(--spacers-margin-xs);
   color: var(--ink);
-}
-
-/* A stepped slider, as for the number of rows: --stops stops (set inline),
-   with a square thumb cut like the toggles. The track runs between the
-   first stop and the last, which sit half a thumb in from the input's ends.
-   Ticks and labels are placed by stop index (--i, set inline), so the
-   slider works at any width: a slot apart by default, or filling its
-   container when fluid. */
-.stop-slider {
-  --thumb: 24px;
-  --slot: 32px;
-
-  position: relative;
-  width: calc(var(--thumb) + (var(--stops) - 1) * var(--slot));
-  /* The first stop, not the input's edge, lines up under the label. At 1 the
-     thumb, centred on that stop, hangs half its width past the label. */
-  margin-left: calc(var(--thumb) / -2);
-}
-
-.stop-slider.is-fluid {
-  width: 100%;
-  margin-left: 0;
-}
-
-/* Where stop --i sits across the slider. */
-.stop-slider-ticks > span,
-.stop-slider-stops > span {
-  position: absolute;
-  left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--i) / (var(--stops) - 1));
-  transform: translateX(-50%);
-}
-
-/* A tick at each stop, behind the input. */
-.stop-slider-ticks {
-  position: absolute;
-  inset: 0 0 auto;
-  height: var(--thumb);
-  pointer-events: none;
-}
-
-.stop-slider-ticks > span {
-  top: calc(50% - var(--spacing-2) / 2);
-  width: var(--rule);
-  height: var(--spacing-2);
-  background: var(--ink);
-}
-
-.stop-slider-input {
-  appearance: none;
-  position: relative;
-  display: block;
-  width: 100%;
-  height: var(--thumb);
-  margin: 0;
-  /* The track. */
-  background: linear-gradient(var(--ink), var(--ink)) center /
-    calc(100% - var(--thumb)) var(--rule) no-repeat;
-  cursor: pointer;
-}
-
-.stop-slider-input::-webkit-slider-runnable-track {
-  height: var(--thumb);
-  background: transparent;
-}
-
-.stop-slider-input::-moz-range-track {
-  height: var(--thumb);
-  background: transparent;
-}
-
-.stop-slider-input::-webkit-slider-thumb {
-  appearance: none;
-  width: var(--thumb);
-  height: var(--thumb);
-  border: none;
-  border-radius: var(--corner-xs);
-  background: var(--ink);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
-}
-
-.stop-slider-input::-moz-range-thumb {
-  width: var(--thumb);
-  height: var(--thumb);
-  border: none;
-  border-radius: var(--corner-xs);
-  background: var(--ink);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
-}
-
-.stop-slider-input:focus-visible {
-  outline: var(--border-base) solid var(--ink);
-  outline-offset: 4px;
-}
-
-/* The stop labels, each centred under its stop. */
-.stop-slider-stops {
-  position: relative;
-  height: 1em;
-  margin-top: var(--spacers-margin-xs);
-  white-space: nowrap;
-}
-
-.stop-slider-stops > span {
-  opacity: 0.55;
-  /* Clicking a label moves the slider to it. */
-  cursor: pointer;
-  user-select: none;
-}
-
-.stop-slider-stops > .is-current {
-  opacity: 1;
 }
 
 /* Row metrics: a white shell, cut at bottom-left and top-right like the open
@@ -1255,41 +797,6 @@ body {
 
 /* ── Line styles ──────────────────────────────────────── */
 
-/* Line Styles, an outlined block. Nothing sits beside its title, so the
-   columns start below the notch. */
-.line-styles {
-  padding-top: calc(var(--notch-depth) + var(--spacers-padding-md));
-}
-
-/* A column for each line, all one width. */
-.line-columns {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: var(--spacers-padding-sm);
-}
-
-/* Solid / Dashed set a little closer, to fit a column at the design width. */
-.line-column .choice-option {
-  padding-inline: var(--spacing-2);
-}
-
-/* The line's name, the line, then its controls, each the column's width. */
-.line-column {
-  display: flex;
-  flex-direction: column;
-}
-
-.line-column-controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacers-padding-sm);
-}
-
-/* Solid / Dashed across the column, its two options sharing it. */
-.line-column .choice-option {
-  flex: 1;
-}
-
 /* Named for screen readers, not shown. */
 .visually-hidden {
   position: absolute;
@@ -1322,67 +829,6 @@ body {
   grid-column: 2;
   margin: 0;
   color: var(--ink);
-}
-
-.sheet-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacers-padding-sm);
-}
-
-.sheet-actions.is-inbound {
-  justify-self: end;
-  margin-right: var(--block-bevel);
-}
-
-/* What Upload Config takes, set to its left and ending against it. */
-.sheet-actions-note {
-  max-width: 22em;
-  margin: 0;
-  color: var(--ink);
-  line-height: 1.3;
-  text-align: right;
-}
-
-/* Output: the actions that send the sheet out, at the end of the line.
-   No field of its own, just its title over the buttons, so it takes only
-   the room they need. Save to PDF leads, filled; the preview and the
-   config sit under it, outlined in teal. */
-.output-block {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: var(--spacers-padding-md);
-}
-
-/* Set as the notched titles are: capitals centred in a band as deep as a
-   notch from the top of the row, so it shares a baseline with Header's. */
-.output-title {
-  display: grid;
-  align-content: center;
-  height: var(--block-notch-depth);
-  margin: 0;
-  color: var(--color-black);
-  text-align: center;
-  text-box: trim-both cap alphabetic;
-}
-
-/* The buttons under the title, starting level with the first line inside
-   the blocks beside them: a notch's depth, then the blocks' padding, from
-   the top. One stack, evenly spaced; Save to PDF leads by its fill alone. */
-.output-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacers-padding-xs);
-  margin-top: var(--spacers-padding-md);
-}
-
-.output-secondary {
-  display: contents;
-}
-
-/* Set a little closer than other buttons, to fit one page column. */
-.output-actions .action-button {
-  padding-inline: var(--spacing-2);
 }
 
 /* A black button cut like the choice switch: bottom-left and top-right
@@ -1493,81 +939,6 @@ body {
   }
 }
 
-/* The lead action keeps the plain button's black fill, so it stands out
-   from the outlined ones beside it. */
-/* The others: outlined in teal on the page, filling teal on hover. The
-   outline is the hover colour showing round the inset fill. */
-.action-button.is-secondary {
-  --border: var(--border-thick);
-  --fill: var(--color-bg);
-  --label: var(--color-black);
-  --label-hover: var(--color-mist);
-}
-
-/* ── Sheet preview ────────────────────────────────────── */
-
-/* The sheet as it will print, on a panel that slides down from the top of
-   the screen. Starts above it; .is-open brings it down. */
-.sheet-preview {
-  --ink: var(--color-black);
-  --ink-contrast: var(--color-mist);
-  --paper: var(--color-mist);
-
-  box-sizing: border-box;
-  position: fixed;
-  inset: 0 0 auto;
-  width: 100%;
-  max-width: none;
-  height: calc(100dvh - var(--spacers-margin-lg));
-  max-height: none;
-  margin: 0;
-  padding: var(--spacers-padding-lg) var(--grid-margin);
-  border: 0;
-  border-bottom: var(--border-thick) solid var(--ink);
-  background: var(--paper);
-  color: var(--ink);
-  transform: translateY(-100%);
-  transition: transform 320ms ease-out;
-}
-
-.sheet-preview.is-open {
-  transform: none;
-}
-
-.sheet-preview::backdrop {
-  background: rgb(from var(--color-black) r g b / 0.4);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sheet-preview {
-    transition: none;
-  }
-}
-
-/* Top right: an action button, as on the page. */
-.sheet-preview-close {
-  position: absolute;
-  top: var(--spacers-padding-xs);
-  right: var(--grid-margin);
-}
-
-/* The page, centred in what's left, drawn to fit it. */
-.sheet-preview-stage {
-  display: grid;
-  place-items: center;
-  height: 100%;
-  overflow: hidden;
-}
-
-.sheet-preview-paper {
-  display: block;
-  outline: var(--border-thick) solid var(--ink);
-}
-
-.sheet-preview-message {
-  margin: 0;
-}
-
 /* ── Printing ─────────────────────────────────────────── */
 
 /* The sheet set out for printing: off screen, and on paper the only thing
@@ -1616,551 +987,17 @@ body {
   clip-path: none;
 }
 
-.block.is-outlined::after,
-.is-outlined .block-title::before {
-  content: none;
-}
-
-.block-title,
-.is-outlined .block-title {
-  position: static;
-  display: block;
-  height: auto;
-  margin: 0;
-  padding: 0;
-  background: none;
-  clip-path: none;
-  isolation: auto;
-}
-
-.line-styles,
-.header-panel {
-  padding-top: var(--spacers-padding-md);
-}
-
-/* Its title and first column flush with Row 1 and the Row Metrics title. */
-.line-styles {
-  padding-left: var(--spacers-padding-md);
-}
-
-.line-styles .block-title {
-  margin-bottom: var(--spacers-padding-md);
-}
-
-/* Output's title on the same line as the others. */
-.output-block {
-  padding-top: var(--spacers-padding-md);
-}
-
-.output-title {
-  display: block;
-  height: auto;
-  text-align: left;
-}
-
-/* The rule between Line Styles and Header: on the left edge of column 8,
-   where Header starts, from the rule under Row Metrics to the bottom of
-   the page. */
-.header-panel::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--spacers-padding-md));
-  bottom: 0;
-  left: calc(var(--border-thick) / -2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
-/* Line Styles as a ruled panel: a rule over the line names, and a rule
-   between each pair of columns running from it to the bottom of the page.
-   Each column's underline climbs at 45° to meet the rule on its right where
-   that meets the top one, so name, underline and rules frame one cell.
-
-   Every rule sits half a gutter from what's either side of it: columns a
-   gutter apart, the last column's half-gutter running on to the rule
-   between Line Styles and Header, Header's contents half a gutter past it. */
-.line-styles {
-  --cell-gap: var(--grid-gutter);
-
-  display: flex;
-  flex-direction: column;
-  padding-right: 0;
-}
-
-/* Header and Output padded alike on both sides, so each sits the same
-   distance from the rules either side of it. Output takes two columns to
-   have room for that, Header three. */
-.header-panel,
-.output-block {
-  padding-inline: var(--spacers-padding-md);
-}
-
-.header-panel {
-  grid-column: span 3;
-}
-
-.output-block {
-  grid-column: span 2;
-}
-
-/* A rule over the names and one under the controls, half a gap below them:
-   both from the window's left edge to the rule on column 8's edge, drawn
-   as a border image so their overhang takes no room. */
-.line-columns {
-  gap: var(--cell-gap);
-  padding-bottom: calc(var(--cell-gap) / 2);
-  border-block: var(--border-thick) solid transparent;
-  border-image: linear-gradient(var(--color-steel) 0 0) 1 / var(--border-thick) 0 /
-    0 var(--grid-gutter) 0 100vw;
-}
-
-.line-column {
-  position: relative;
-}
-
-/* A rule under Row Metrics' title and controls, across the window, spaced
-   as Line Styles' is: a padding below the title and controls, then the
-   rule, then half a gutter down to the capitals of the row titles. */
-.metrics-block .sheet-header {
-  padding-bottom: var(--spacers-padding-md);
-  border-bottom: var(--border-thick) solid transparent;
-  border-image: linear-gradient(var(--color-steel) 0 0) 1 / 0 0 var(--border-thick) 0 / 0 100vw;
-}
-
-/* Half a gutter from the rule to the row titles' capitals, as in Line
-   Styles. A row title sits on its frame's top edge, its capitals starting
-   about 4 px into the editor, so the gap is that much less. */
-.metrics-block {
-  row-gap: calc(var(--grid-gutter) / 2 - 4px);
-}
-
-/* The rule between Header and Output, like the one between Line Styles and
-   Header: down the middle of the gutter, from the rule under Row Metrics to
-   the bottom of the page. */
-.output-block {
-  position: relative;
-}
-
-.output-block::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--spacers-padding-md));
-  bottom: 0;
-  left: calc(var(--grid-gutter) / -2 - var(--border-thick) / 2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
-/* At the page's edges, the margin alone: nothing here draws a block's
-   edge, so a block's own padding would only double it. Content sits a
-   gutter from the window, as it sits a gutter from its neighbours. */
-.metrics-block {
-  padding-inline: 0;
-}
-
-.line-styles {
-  padding-left: 0;
-}
-
-.output-block {
-  padding-right: 0;
-}
-
-.sheet-actions.is-inbound {
-  margin-right: 0;
-}
-
-/* Output's actions divided by steel rules, half a gutter either side, as
-   Line Styles' cells are. A rule runs from the rule beside Header — the
-   block's padding and half a gutter away — to the window's right edge,
-   drawn as a border image so its overhang takes no room. */
-.output-actions {
-  gap: calc(var(--grid-gutter) / 2);
-}
-
-.output-rule {
-  width: 100%;
-  height: 0;
-  margin: 0;
-  border: 0;
-  border-top: var(--border-thick) solid transparent;
-  border-image: linear-gradient(var(--color-steel) 0 0) 1 / var(--border-thick) 0 0 0 /
-    0 100vw 0 calc(var(--spacers-padding-md) + var(--grid-gutter) / 2);
-}
-
-/* Output without a visible title: its three actions fill the column from
-   the top of the row to its foot, an equal share each, rules between.
-   Each grows only as tall as it is wide, so the most they become is
-   square; with less height to share they stay as near it as they can. */
-.output-actions {
-  container-type: inline-size;
-  flex: 1 1 auto;
-  margin-top: 0;
-}
-
-.output-actions .action-button {
-  flex: 1 1 0;
-  height: auto;
-  min-height: 32px;
-  max-height: 100cqi;
-}
-
-/* Output narrows to one column, Header widens to four, so the actions come
-   nearer square. Each sits half a gutter from everything round it: the
-   rule above the row, the rules between, the rule beside Header, the
-   window's right edge and the page's foot. */
-.header-panel {
-  grid-column: span 4;
-}
-
-.output-block {
-  grid-column: span 1;
-  padding: 0 0 calc(var(--grid-gutter) / 2);
-  /* Out into the page margin, to half a gutter from the window. */
-  margin-right: calc(var(--grid-gutter) / 2 - var(--grid-margin));
-}
-
-/* Half a gutter under the rule above the row, which is a row gap above
-   this one. */
-.output-actions {
-  margin-top: calc(var(--grid-gutter) / 2 - var(--spacers-padding-md));
-}
-
-.output-rule {
-  border-image-outset: 0 100vw 0 calc(var(--grid-gutter) / 2);
-}
-
-/* The rule between Header and Output on the left edge of column 12, where
-   Output starts, as the one before Header sits on column 8's. Header ends
-   a gutter short of it, as it starts a padding past the other; Output's
-   actions start half a gutter past it, the rules between them reaching
-   back to it. */
-.output-block::before {
-  left: calc(var(--border-thick) / -2);
-}
-
-.output-block {
-  padding-left: calc(var(--grid-gutter) / 2);
-}
-
-.output-rule {
-  border-image-outset: 0 100vw 0 calc(var(--grid-gutter) / 2);
-}
-
-.header-panel {
-  padding-right: 0;
-}
-
-/* Each action in an equal share of the column, between the rules, and
-   three quarters of that share's width and height, centred in it. Narrow,
-   so a label may wrap. */
-.output-cell {
-  flex: 1 1 0;
-  display: grid;
-  place-items: center;
-  min-height: 0;
-}
-
-.output-cell .action-button {
-  width: 75%;
-  height: 75%;
-  min-height: 0;
-  max-height: none;
-  padding-inline: var(--spacing-1, 4px);
-  white-space: normal;
-  text-align: center;
-  line-height: 1.1;
-}
-
-/* Upload Config as the Output actions are: black, square-ish, three
-   quarters of a page column wide, its label free to wrap. Its right edge
-   lines up with theirs. */
-.sheet-actions.is-inbound .action-button {
-  /* One page column: the header spans all twelve. */
-  width: calc((100cqi - 11 * var(--grid-gutter)) / 12 * 0.75);
-  height: auto;
-  aspect-ratio: 72 / 61;
-  padding-inline: var(--spacing-1);
-  white-space: normal;
-  text-align: center;
-  line-height: 1.1;
-}
-
 .app-header {
   container-type: inline-size;
 }
 
-/* A label set a word to a line: spacing wider than any button forces a
-   break at every space. */
-.action-button.is-word-stacked {
-  word-spacing: 100vw;
-}
-
 /* ── Header and Page Setup ────────────────────────────── */
-
-/* Header over Page Setup in the four columns between Line Styles and
-   Output. The rule on column 8's edge belongs to the pair now. */
-.footer-middle {
-  position: relative;
-  grid-column: span 4;
-  display: flex;
-  flex-direction: column;
-}
-
-.header-panel::before {
-  content: none;
-}
-
-.footer-middle::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--spacers-padding-md));
-  bottom: 0;
-  left: calc(var(--border-thick) / -2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
-/* Header, tighter: its note floated right of the title, its fields
-   closer together. */
-.header-panel,
-.page-setup {
-  padding: var(--spacers-padding-md) 0 var(--spacers-padding-md) var(--spacers-padding-md);
-  gap: var(--spacers-padding-sm);
-}
-
-.header-panel-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--spacers-padding-sm);
-}
-
-.header-panel-top .header-panel-info {
-  text-align: right;
-}
 
 .header-fields {
   row-gap: 0;
 }
 
-/* Page Setup under Header, a rule across the columns between them. */
-.page-setup {
-  display: flex;
-  flex-direction: column;
-  /* The rule runs on across the gutter to the rule on column 12's edge. */
-  border-top: var(--border-thick) solid transparent;
-  border-image: linear-gradient(var(--color-steel) 0 0) 1 / var(--border-thick) 0 0 0 /
-    0 var(--grid-gutter) 0 0;
-}
-
-.page-setup-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacers-padding-sm) var(--spacers-padding-lg);
-}
-
-/* Names to the left of their toggles, as on Row Metrics. */
-.page-setup .sheet-control {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--spacers-padding-sm);
-}
-
-.page-setup .sheet-control-name {
-  text-box: trim-both cap alphabetic;
-}
-
-/* ── Bottom row in two bands ──────────────────────────── */
-
-/* Two bands: Header's height, then the rest. Line Styles spans both;
-   Header and Page Setup take one each in columns 8–11, and Output's two
-   parts one each in column 12. The rule between the bands runs from
-   column 8's edge to the window. */
-.sheet-footer {
-  grid-template-rows: auto 1fr;
-}
-
-.line-styles {
-  grid-row: 1 / span 2;
-}
-
-.header-panel,
-.page-setup {
-  position: relative;
-  grid-column: 8 / span 4;
-}
-
-.header-panel {
-  grid-row: 1;
-}
-
-.page-setup {
-  grid-row: 2;
-  border-image-outset: 0 100vw 0 0;
-}
-
-/* Output's section only names the two parts; they lay out on the grid. */
-.output-block {
-  display: contents;
-}
-
-.output-actions.is-top,
-.output-actions.is-bottom {
-  position: relative;
-  grid-column: 12;
-  container-type: inline-size;
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--grid-gutter) / 2);
-  margin: 0;
-  margin-right: calc(var(--grid-gutter) / 2 - var(--grid-margin));
-  padding-left: calc(var(--grid-gutter) / 2);
-}
-
-/* Half a gutter under the rule above the row, a row gap above this. */
-.output-actions.is-top {
-  grid-row: 1;
-  margin-top: calc(var(--grid-gutter) / 2 - var(--spacers-padding-md));
-  padding-bottom: calc(var(--grid-gutter) / 2);
-}
-
-.output-actions.is-bottom {
-  grid-row: 2;
-  padding-block: calc(var(--grid-gutter) / 2);
-}
-
-/* The rules on the edges of columns 8 and 12, now drawn band by band. */
-.header-panel::before,
-.page-setup::before,
-.output-actions.is-top::before,
-.output-actions.is-bottom::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--border-thick) / -2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
-.header-panel::before {
-  top: calc(-1 * var(--spacers-padding-md));
-}
-
-.output-actions.is-top::before {
-  top: calc(var(--spacers-padding-md) - var(--grid-gutter) / 2 - var(--spacers-padding-md));
-}
-
-/* The page setup rule's top edge, so the line down column 12 doesn't
-   cross it. */
-.page-setup::before {
-  top: calc(-1 * var(--border-thick));
-}
-
-/* Output's own rule went with its box; each part draws its own. */
-.output-block::before {
-  content: none;
-}
-
-/* The rows centred between the rule above them and the rule below: a
-   padding-md under the frames, and the same from the rule above to the
-   row titles' capitals, which sit about 4 px into each editor. */
-.metrics-block {
-  padding-bottom: var(--spacers-padding-md);
-  row-gap: calc(var(--spacers-padding-md) - 4px);
-}
-
-/* Every block title a padding-md under the rule above it, as Page Setup's
-   is. Line Styles and Header are a row gap under the rule already. Row
-   Metrics' title is centred on its controls, about half a gutter into its
-   header row, so the block's own top padding is the other half. */
-.line-styles,
-.header-panel {
-  padding-top: 0;
-}
-
-.metrics-block {
-  padding-top: calc(var(--grid-gutter) / 2);
-}
-
-/* Page Setup's toggles stacked, floated to the right of its title: names
-   in one column, toggles in the next, so the toggles line up. */
-.page-setup {
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.page-setup-controls {
-  display: grid;
-  grid-template-columns: max-content max-content;
-  row-gap: var(--spacers-margin-sm);
-}
-
-.page-setup .sheet-control {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
-  align-items: center;
-}
-
-/* Both toggles one width, their options sharing it. */
-.page-setup .choice-option {
-  flex: 1;
-}
-
-/* Output's actions shaped as Upload Config is — three quarters of a column
-   wide, a fixed near-square — rather than stretched to their bands, which
-   no longer share a height. Still centred in them. */
-.output-cell .action-button {
-  height: auto;
-  max-height: 100%;
-  aspect-ratio: 72 / 61;
-}
-
 /* ── Output as one column again ───────────────────────── */
-
-/* Output down both bands in three equal parts, its own rules between; the
-   rule over Page Setup stops at column 12's edge. */
-.page-setup {
-  border-image-outset: 0 var(--grid-gutter) 0 0;
-}
-
-.output-actions.is-column {
-  position: relative;
-  grid-column: 12;
-  grid-row: 1 / span 2;
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--grid-gutter) / 2);
-  margin: calc(var(--grid-gutter) / 2 - var(--spacers-padding-md))
-    calc(var(--grid-gutter) / 2 - var(--grid-margin)) 0 0;
-  padding: 0 0 calc(var(--grid-gutter) / 2) calc(var(--grid-gutter) / 2);
-}
-
-.output-actions.is-column::before {
-  content: '';
-  position: absolute;
-  top: calc(var(--grid-gutter) / -2);
-  bottom: 0;
-  left: calc(var(--border-thick) / -2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
-/* Each action Upload Config's shape, as large as fits in three quarters
-   of its part's width and of its height, centred in it. */
-.output-cell {
-  container-type: size;
-}
-
-.output-cell .action-button {
-  width: min(75cqw, 75cqh * 72 / 61);
-  height: auto;
-  max-height: none;
-  aspect-ratio: 72 / 61;
-}
 
 /* Margin: a number in the underlined field style of Header's, its unit
    after it, under the toggles in their columns. */
@@ -2261,86 +1098,6 @@ body {
   justify-self: start;
 }
 
-/* ── Preview: page setup beside the sheet ─────────────── */
-
-/* The page setup in a table on the left, the sheet in the rest. */
-.sheet-preview-body {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: var(--grid-gutter);
-  height: 100%;
-}
-
-.sheet-preview-details[hidden] + .sheet-preview-stage {
-  grid-column: 1 / -1;
-}
-
-/* No lines between the columns; a rule on the top of each row only. */
-.sheet-preview-details {
-  align-self: center;
-  min-width: 14rem;
-  border-collapse: collapse;
-  color: var(--ink);
-}
-
-.sheet-preview-details tr {
-  border-top: var(--border-thick) solid var(--color-steel);
-}
-
-.sheet-preview-details th,
-.sheet-preview-details td {
-  padding: var(--spacers-padding-xs) 0;
-  text-align: left;
-  font-weight: inherit;
-}
-
-.sheet-preview-details td {
-  padding-left: var(--grid-gutter);
-}
-
-/* Table, sheet and Close all hang from one line: the top of the sheet. */
-.sheet-preview-details {
-  align-self: start;
-}
-
-.sheet-preview-stage {
-  align-items: start;
-  /* Room above for the sheet's outline, drawn outside it. */
-  padding-top: var(--border-thick);
-  box-sizing: border-box;
-}
-
-.sheet-preview-close {
-  top: var(--spacers-padding-lg);
-}
-
-.sheet-preview:focus {
-  outline: none;
-}
-
-/* Row Metrics' title and its controls' names on one baseline. Each control
-   keeps its name centred on its slider track or toggle; the controls as a
-   whole move to put the names on the title's baseline. A control's
-   baseline is its name's, as its first item. */
-.metrics-block .sheet-header,
-.metrics-block .sheet-controls {
-  align-items: baseline;
-}
-
-/* With the title on the names' baseline rather than centred on the
-   controls, the block's top padding is a whole padding-md again, as every
-   block title's is. */
-.metrics-block {
-  padding-top: var(--spacers-padding-md);
-}
-
-/* Row Metrics' title sits a padding-md above the rule below it, as Line
-   Styles' does, and the controls' foot — the slider's stop numbers — the
-   same. The two controls keep their names on one baseline. */
-.metrics-block .sheet-header {
-  align-items: flex-end;
-}
-
 /* ── Title bands ──────────────────────────────────────── */
 
 /* Every block's title sits in a band as tall as Row Metrics' controls —
@@ -2352,47 +1109,7 @@ body {
   --title-band: calc(24px + var(--spacers-margin-xs) + var(--type-ui-xs));
 }
 
-.metrics-block .sheet-header {
-  align-items: center;
-  min-height: var(--title-band);
-}
-
-.line-styles .block-title,
-.header-panel-top,
-.page-setup .block-title {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  min-height: var(--title-band);
-}
-
-.header-panel-top {
-  align-items: center;
-}
-
 /* ── Option B: one-row controls ───────────────────────── */
-
-/* Number of rows in one row: no numbers under the track; the current one
-   is set in the handle, in the contrast colour. The stop labels move up
-   over the track, every one but the current hidden, and let clicks
-   through to the slider. */
-.metrics-block .stop-slider-stops {
-  position: absolute;
-  inset: 0 0 auto;
-  height: var(--thumb);
-  margin: 0;
-  line-height: var(--thumb);
-  pointer-events: none;
-}
-
-.metrics-block .stop-slider-stops > span {
-  visibility: hidden;
-}
-
-.metrics-block .stop-slider-stops > .is-current {
-  visibility: visible;
-  color: var(--ink-contrast);
-}
 
 /* So the band is as tall as one control row: the slider's handle. */
 .rows {
@@ -2518,68 +1235,17 @@ body {
   }
 }
 
-/* Every action button one size: three quarters of a page column wide, in
-   Upload Config's near-square. Output's take theirs from their part of the
-   column, which is a column wide; a part too short for its button grows
-   to hold it, the row with it, rather than shrinking the button. */
-.output-cell {
-  container-type: inline-size;
-  min-height: auto;
-}
-
-.output-cell .action-button {
-  width: 75cqw;
-}
-
 /* ── Condensed foot ───────────────────────────────────── */
-
-/* The bottom row only as tall as it needs: everything at the page's foot
-   half a gutter from it, as Output's actions are; the credit half a gutter
-   under Line Styles' rule; Header's fields closer. */
-.line-styles {
-  padding-bottom: calc(var(--grid-gutter) / 2);
-}
 
 .credit-link {
   padding-top: calc(var(--grid-gutter) / 2);
-}
-
-.page-setup {
-  padding-bottom: calc(var(--grid-gutter) / 2);
 }
 
 .header-field-input {
   padding-block: var(--spacing-1);
 }
 
-/* No rule between Row Metrics' head and its rows, nor over Line Styles'
-   names: the spacing alone divides them. Line Styles keeps its rule under
-   the controls. */
-.metrics-block .sheet-header {
-  border-bottom: 0;
-  border-image: none;
-}
-
-.line-columns {
-  border-top: 0;
-  border-image-width: 0 0 var(--border-thick) 0;
-}
-
 /* ── One bottom padding ───────────────────────────────── */
-
-/* Every block's last content sits a padding-md above the rule or the page
-   foot beneath it, as Row Metrics' rows do above their rule: Line Styles'
-   cards above its rule, the credit above the foot, Header's fields
-   above Page Setup's rule, Page Setup's margin above the foot. The credit
-   sits a padding-md under the rule, as the titles do. */
-.line-columns {
-  padding-bottom: var(--spacers-padding-md);
-}
-
-.line-styles,
-.page-setup {
-  padding-bottom: var(--spacers-padding-md);
-}
 
 .credit-link {
   padding-top: var(--spacers-padding-md);
@@ -2589,51 +1255,7 @@ body {
    their parts; the last part's lower half makes the rest up to the
    padding-md. */
 
-/* ── Title to first content ───────────────────────────── */
-
-/* From a title's band to the capitals of what comes first under it, the
-   same in every block: Line Styles' padding-md and half a gutter, 36 px.
-   Row Metrics reaches its row titles over the header's bottom padding and
-   the block's row gap; Header reaches its first field's name, which sits
-   about 9 px into its row. */
-.metrics-block .sheet-header {
-  padding-bottom: calc(var(--grid-gutter) / 2);
-}
-
-.header-panel {
-  gap: calc(var(--spacers-padding-md) + var(--grid-gutter) / 2 - 9px);
-}
-
 /* ── Page Setup over Header ───────────────────────────── */
-
-/* Page Setup first, a row gap under the rule below the rows; Header under
-   it, the rule between them on Header's top now, running across the gutter
-   to column 12's rule. The rules down column 8's edge follow: Page Setup's
-   from the rule above the row, Header's from its own top rule. */
-.page-setup {
-  grid-row: 1;
-  padding-top: 0;
-  border-top: 0;
-  border-image: none;
-}
-
-.header-panel {
-  grid-row: 2;
-  padding-top: var(--spacers-padding-md);
-  padding-bottom: var(--spacers-padding-md);
-  border-top: var(--border-thick) solid transparent;
-  border-image: linear-gradient(var(--color-steel) 0 0) 1 / var(--border-thick) 0 0 0 /
-    0 var(--grid-gutter) 0 0;
-}
-
-.page-setup::before {
-  top: calc(-1 * var(--spacers-padding-md));
-}
-
-.header-panel::before {
-  content: '';
-  top: calc(-1 * var(--border-thick));
-}
 
 /* Upload Config: a small panel in the page's blue on mist. A dashed drop
    area with the file picker in it, or a font's masters to choose from; its
@@ -2753,160 +1375,8 @@ body {
 
 /* ── Page Setup over Header; Line Styles over Output ───── */
 
-/* Three bands. Page Setup takes the first in columns 1–5 and Header the
-   other two under it, a rule between them from the window's edge. Line
-   Styles takes the first two in columns 6–12, Output the third, in the box
-   under Line Styles' rule; each block only as tall as it needs. A steel
-   rule runs down column 6's edge from the rule above the row.
-
-   Any height to spare — the left side running taller than the right —
-   goes to the last band, Output's, so its blue always starts at Line
-   Styles' rule rather than leaving Line Styles' box stretched below it. */
-.sheet-footer {
-  grid-template-rows: auto auto 1fr;
-}
-
-/* Page Setup and Header in a column of their own down the whole row,
-   Header taking whatever height Page Setup leaves. Each title stays a
-   padding-md under the rule above it, as every block's does; the spare
-   height goes between Header's fields, the last a padding-md above the
-   page's foot. */
-.footer-side {
-  display: grid;
-  grid-column: 1 / span 5;
-  grid-row: 1 / -1;
-  grid-template-columns: subgrid;
-  /* Page Setup as tall as it needs, Header the rest. Two equal halves would
-     each be as tall as the taller block, pushing the side — and with it
-     Output's band — taller than it has to be. */
-  grid-template-rows: auto 1fr;
-}
-
-.footer-side > .page-setup,
-.footer-side > .header-panel {
-  grid-row: auto;
-  grid-template-rows: 1fr;
-}
-
-.footer-side > .page-setup {
-  padding-bottom: var(--spacers-padding-md);
-}
-
-.footer-side .header-fields {
-  align-self: stretch;
-  align-content: space-between;
-}
-
-/* Page Setup's second row of controls a margin-md under the first. */
-.footer-side .page-setup-controls {
-  row-gap: var(--spacers-margin-md);
-}
-
-/* Header's note stays a margin-sm under its title; only its fields
-   spread. */
-.footer-side .header-panel-top {
-  justify-content: flex-start;
-  gap: var(--spacers-margin-sm);
-}
-
-/* Page Setup on the page's columns: its title across the first two, its
-   four controls across the other three, in two columns of two — each name
-   over its control. Orientation and Margins, then Paper and Show metric
-   values. */
-.page-setup {
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-column: 1 / span 5;
-  grid-row: 1;
-  align-items: start;
-  gap: 0 var(--grid-gutter);
-  padding-left: 0;
-}
-
-.page-setup::before,
-.header-panel::before {
-  content: none;
-}
-
-.page-setup .block-title {
-  grid-column: 1 / span 2;
-}
-
-.page-setup-controls {
-  grid-column: 3 / span 3;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
-  grid-auto-flow: column;
-  gap: var(--spacers-margin-sm);
-}
-
-.page-setup .sheet-control {
-  display: grid;
-  grid-column: auto;
-  grid-template-columns: none;
-  justify-items: start;
-  align-items: start;
-  row-gap: var(--spacers-padding-xs);
-}
-
-/* The toggles one width, the widest's. */
-.page-setup .sheet-control:has(.choice) {
-  justify-items: stretch;
-}
-
-/* Header under Page Setup, a rule between them from the window's edge to
-   column 6's. Laid out as Page Setup is: its title over its note across
-   the first two columns, a field per place across the other three. */
-.header-panel {
-  display: grid;
-  grid-template-columns: subgrid;
-  align-items: start;
-  gap: 0 var(--grid-gutter);
-  grid-column: 1 / span 5;
-  grid-row: 2 / span 2;
-  padding: var(--spacers-padding-md) 0;
-  border-top: var(--border-thick) solid transparent;
-  border-image: linear-gradient(var(--color-steel) 0 0) 1 / var(--border-thick) 0 0 0 /
-    0 var(--grid-gutter) 0 var(--grid-margin);
-}
-
-.header-panel-top {
-  grid-column: 1 / span 2;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacers-padding-xs);
-}
-
-.header-panel-top .header-panel-info {
-  text-align: left;
-}
-
 .header-fields {
   grid-column: 3 / span 3;
-}
-
-/* Line Styles on the right, the rule down its left edge; its own rules
-   run on to the window's right edge. */
-.line-styles {
-  position: relative;
-  grid-column: 6 / span 7;
-  grid-row: 1 / span 2;
-  padding-left: var(--spacers-padding-md);
-}
-
-.line-styles::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--spacers-padding-md));
-  bottom: 0;
-  left: calc(var(--border-thick) / -2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
-.line-columns {
-  border-image-outset: 0 var(--grid-margin) 0 var(--spacers-padding-md);
 }
 
 /* ── Top bar and Output ───────────────────────────────── */
@@ -2933,118 +1403,6 @@ body {
   font-size: var(--font-size-6);
 }
 
-
-/* Output in the box under Line Styles: its title, then the three actions
-   beside it, each Upload Config's size. A size container, its buttons
-   measured from its width — seven columns and six gutters, less its left
-   padding. (Not the footer: containment would cut it off from the page's
-   subgrid.) */
-.output-block {
-  position: relative;
-  container-type: inline-size;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--spacers-margin-lg);
-  grid-column: 6 / span 7;
-  grid-row: 3;
-  /* --output-pad from Line Styles' rule — a padding-md above the box, so
-     the box rises by the difference — and from the page's foot. */
-  margin-top: calc(var(--output-pad) - var(--spacers-padding-md));
-  margin-right: 0;
-  padding: 0 0 var(--output-pad) var(--spacers-padding-md);
-  border: 0;
-  border-image: none;
-}
-
-/* The rule down column 6's edge carried on from Line Styles' to the page's
-   foot. */
-.output-block::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--output-pad));
-  bottom: 0;
-  left: calc(var(--border-thick) / -2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
-.output-title {
-  display: flex;
-  align-items: center;
-  height: auto;
-  min-height: var(--title-band);
-  margin: 0;
-  text-align: left;
-}
-
-.output-actions.is-column {
-  position: static;
-  container-type: normal;
-  grid-column: auto;
-  grid-row: auto;
-  flex-direction: row;
-  flex: none;
-  gap: var(--spacers-margin-md);
-  margin: 0;
-  padding: 0;
-}
-
-.output-actions.is-column::before,
-.output-rule {
-  display: none;
-}
-
-.output-cell {
-  container-type: normal;
-  flex: none;
-}
-
-/* Every action the bevelled rectangle again — the corners cut on the
-   diagonal, its label on one line — undoing the square and round shapes
-   Upload Config and Output's actions had. */
-.sheet-actions.is-inbound .action-button,
-.output-cell .action-button {
-  width: auto;
-  height: 32px;
-  max-height: none;
-  aspect-ratio: auto;
-  padding-inline: var(--spacing-4);
-  white-space: nowrap;
-  line-height: 1;
-}
-
-/* Output on the page's columns, so the credit's rule lands in the same
-   place on the grid at any width. The title and its actions take columns
-   6 to 10; too tight for one line, the actions go two by two. The credit
-   is centred across columns 11 and 12, a steel rule down column 11's
-   left edge from Line Styles' rule to the page's foot. */
-.output-block {
-  display: grid;
-  grid-template-columns: subgrid;
-  /* The page's gutters, not the gap the flex row had. */
-  gap: normal;
-  align-items: center;
-  container-type: normal;
-}
-
-.output-main {
-  container: output-main / inline-size;
-  grid-column: 1 / span 5;
-  display: flex;
-  align-items: center;
-}
-
-.output-actions.is-column {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, auto);
-  /* One space, the same five times: title to the first button, between
-     each, and the last to the credit's rule. */
-  justify-content: space-evenly;
-  gap: var(--spacers-margin-xs) 0;
-}
-
 /* Too narrow for the four on one line with those spaces a margin-sm at
    the least — two by two, each pair a column's width. */
 @container output-main (width < 520px) {
@@ -3058,28 +1416,6 @@ body {
   }
 }
 
-.output-block .credit-link {
-  position: relative;
-  grid-column: 6 / span 2;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 0;
-  text-align: center;
-}
-
-.output-block .credit-link::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--output-pad));
-  bottom: calc(-1 * var(--output-pad));
-  left: calc(var(--border-thick) / -2);
-  width: var(--border-thick);
-  background: var(--color-steel);
-}
-
 /* ── Spacing from Figma ───────────────────────────────── */
 
 /* Spacing matched to the Figma layout (Type-Template-Maker, node 568:884),
@@ -3091,33 +1427,6 @@ body {
    on the field's top edge from the editor's own top. */
 .editor.frame {
   --frame-top: round(down, calc(var(--type-heading-h3) / 2), 1px);
-}
-
-/* Page Setup's names whole, a padding-xs over their controls. */
-.page-setup .sheet-control-name {
-  text-box: normal;
-}
-
-/* Header: its title in the first two columns; its note heading the other
-   three on the title's baseline, a margin-md over the fields, which stack
-   a margin-sm apart. */
-.header-panel-top {
-  align-self: baseline;
-}
-
-.header-body {
-  grid-column: 3 / span 3;
-  /* The note on the title's baseline. */
-  align-self: baseline;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacers-margin-md);
-}
-
-.footer-side .header-fields {
-  align-self: stretch;
-  align-content: start;
-  row-gap: var(--spacers-margin-sm);
 }
 
 /* Each field's underline on the foot of its name's line box, its text
@@ -3136,31 +1445,10 @@ body {
   inset: auto 0 0;
 }
 
-/* Line Styles' cards a margin-sm under its title's text — the band is
-   taller than the text by the difference — and a margin-sm apart. */
-.line-styles {
-  --cell-gap: var(--spacers-margin-sm);
-}
-
-.line-styles .block-title {
-  margin-bottom: calc(
-    var(--spacers-margin-sm) - (var(--title-band) - var(--type-heading-h2))
-  );
-}
-
 /* Output a padding-md above and below its buttons; the buttons packed
    after the title, a margin-md from it and a margin-sm apart. */
 .rows {
   --output-pad: var(--spacers-padding-md);
-}
-
-.output-main {
-  gap: var(--spacers-margin-md);
-}
-
-.output-actions.is-column {
-  justify-content: start;
-  column-gap: var(--spacers-margin-sm);
 }
 
 /* ── Choice toggles: a sliding thumb and a lamp ───────── */
@@ -3287,107 +1575,6 @@ body {
 
 /* ── Line Styles: a card for each line ────────────────── */
 
-/* Each line in the frame an inactive row has, smaller to suit the column:
-   its top-right and bottom-left corners cut 12px, the line's name set
-   into its top line on a short lead. 16px above and below the controls,
-   12px at the sides. */
-.line-column.frame {
-  --bevel: var(--spacing-3);
-  --frame-top: round(down, calc(var(--type-heading-h3) / 2), 1px);
-
-  padding:
-    calc(var(--frame-top) + var(--frame) + var(--spacing-4))
-    var(--spacing-3)
-    var(--spacing-4);
-}
-
-/* The line's name a step lighter than a heading. The heading face,
-   Special Gothic Expanded One, is a single style; it matches Special
-   Gothic, a variable face, at its widest (wdth 125) and boldest (wght
-   700). So the step down is that face, as wide, at 600. */
-.line-column .frame-title {
-  left: var(--spacing-2);
-  padding: 0 var(--spacing-1);
-  font-family: "Special Gothic", var(--font-family-heading);
-  font-stretch: 125%;
-  font-weight: 600;
-}
-
-/* Each control's name over it, the controls a margin-sm apart, to keep a
-   name with its control. */
-.line-column-controls {
-  gap: var(--spacers-margin-sm);
-}
-
-/* The options closer, to fit inside the card. */
-.line-column .choice-option {
-  padding-inline: var(--spacing-1);
-}
-
-/* Weight and Colour have three options: the thumb a third of the shell,
-   stepping a third at a time. */
-:is(.weight-toggle, .color-toggle) .choice::after {
-  width: calc(100% / 3);
-}
-
-:is(.weight-toggle, .color-toggle) .choice:has(.choice-option:nth-child(2) input:checked)::after {
-  translate: 100%;
-}
-
-:is(.weight-toggle, .color-toggle) .choice:has(.choice-option:nth-child(3) input:checked)::after {
-  translate: 200%;
-}
-
-/* Each weight a bar at its weight, 1, 2 or 3px, in place of its word and
-   lamp; the word stays for screen readers. */
-.weight-toggle .choice-option:nth-child(1) { --bar: 1px; }
-.weight-toggle .choice-option:nth-child(2) { --bar: 2px; }
-.weight-toggle .choice-option:nth-child(3) { --bar: 3px; }
-
-.weight-toggle .choice-option > span {
-  font-size: 0;
-  text-box: normal;
-}
-
-.weight-toggle .choice-option > span::before {
-  content: '';
-  display: block;
-  width: 20px;
-  height: var(--bar);
-  margin: 0;
-  border-radius: 0;
-  background: currentColor;
-  box-shadow: none;
-  vertical-align: baseline;
-}
-
-/* The bars aren't lamps: the chosen one black on the thumb, unlit. */
-.weight-toggle .choice-option:has(input:checked) > span::before {
-  background: currentColor;
-  box-shadow: none;
-}
-
-.weight-toggle .choice-option::after {
-  display: none;
-}
-
-/* Colour's three words in three equal thirds, under the thumb's thirds,
-   with no padding to spare. A third is too narrow for a lamp and a word,
-   so the words go without: the thumb marks the choice, as on Weight. */
-.color-toggle .choice-option {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0;
-}
-
-.color-toggle .choice-option > span::before {
-  display: none;
-}
-
-.color-toggle .choice-option::after {
-  padding-left: 0;
-}
-
 /* Number of rows: a tab for each count, as Weight's bars. The thumb is one
    tab wide and steps a tab at a time; --options and --chosen are set on
    the shell by the control. The numbers go without lamps: the thumb marks
@@ -3413,21 +1600,6 @@ body {
 
 .count-toggle .choice-option::after {
   padding-left: 0;
-}
-
-/* Title to cards the same in Metrics as in Line Styles: 32px, a margin-md,
-   from a title's baseline to its cards' top line. Metrics was 42px, its
-   header's bottom padding and the block's row gap adding up past it, so
-   its row gap gives up the 10px. */
-.metrics-block {
-  row-gap: calc(var(--spacers-padding-md) - 4px - 10px);
-}
-
-/* Output's buttons at the right of their space, so the last ends as far
-   from the credit's rule as the title starts from Output's left rule: a
-   padding-md, 24px, both sides. */
-.output-actions.is-column {
-  justify-content: end;
 }
 
 /* ── Workspace: the sheet in the middle of the screen ── */

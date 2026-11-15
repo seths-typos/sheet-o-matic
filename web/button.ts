@@ -29,11 +29,6 @@ export interface MetricToggle {
   element: HTMLElement;
   /** Mark the field invalid with a message, or clear it with null. */
   setError(message: string | null): void;
-  /**
-   * Show a state set elsewhere, without reporting it back: on or off, and the
-   * field's value. A null value leaves the field's text as it is.
-   */
-  set(on: boolean, value: number | null): void;
 }
 
 /**
@@ -149,10 +144,6 @@ export function createMetricToggle(options: MetricToggleOptions): MetricToggle {
       // An empty aria-invalid reads as false, so set "true" outright.
       if (message === null) input.removeAttribute('aria-invalid');
       else input.setAttribute('aria-invalid', 'true');
-    },
-    set(on, value) {
-      show(on);
-      if (input && value !== null) input.value = String(value);
     },
   };
 }

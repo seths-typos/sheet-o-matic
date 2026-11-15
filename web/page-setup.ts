@@ -1,35 +1,9 @@
 import { createChoiceToggle } from './sheet-controls.js';
 import type { PageSetup } from './sheet-preview.js';
 
-/**
- * Page Setup: the paper the sheet prints on — its orientation, its size and
- * its margin — and whether each metric line's value is printed beside it.
- * Edits `page` in place, calling `onChange` after each edit.
- */
-export function createPageSetupPanel(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
-  const panel = document.createElement('section');
-  panel.className = 'block is-outlined page-setup';
-
-  const title = document.createElement('h2');
-  title.className = 'heading-h2 block-title';
-  title.textContent = '2. Page Setup';
-
-  panel.append(title, createPageSetupControls(page, onChange));
-  return panel;
-}
-
-/** Page Setup's four controls alone, without the panel round them. */
-export function createPageSetupControls(page: PageSetup, onChange: () => void = () => {}): HTMLElement {
-  const controls = document.createElement('div');
-  controls.className = 'page-setup-controls';
-  controls.append(
-    createOrientationToggle(page, onChange),
-    createMarginField(page, onChange),
-    createPaperToggle(page, onChange),
-    createValuesToggle(page, onChange),
-  );
-  return controls;
-}
+// Page Setup's controls: the paper the sheet prints on — its orientation,
+// its size and its margin — and whether each metric line's value is
+// printed beside it. Each edits `page` in place, calling `onChange` after.
 
 /** Show metric values: each line's value printed beside it, or not. */
 export function createValuesToggle(page: PageSetup, onChange: () => void = () => {}): HTMLElement {

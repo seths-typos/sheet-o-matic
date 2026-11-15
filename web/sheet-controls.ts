@@ -8,103 +8,10 @@ let nextId = 0;
 export const MIN_ROWS = 1;
 export const MAX_ROWS = 6;
 
-export interface Stop {
-  value: number;
-  /** Shown under the stop. */
-  label: string;
-}
-
-/**
- * A slider with a stop for each value, labelled underneath. Stops are whole
- * numbers one apart. A native range input, so keyboard and screen readers get
- * the usual slider behaviour; only its look is custom.
- */
+/** How a control is named. */
 export interface ControlOptions {
   /** Name it for screen readers only, where its place already says it. */
   hideName?: boolean;
-}
-
-export interface StopSliderOptions extends ControlOptions {
-  /** Fill the container's width rather than set stops a slot apart. */
-  fluid?: boolean;
-}
-
-export function createStopSlider(
-  name: string,
-  stops: Stop[],
-  value: number,
-  onChange: (value: number) => void,
-  options: StopSliderOptions = {},
-): HTMLElement {
-  const id = `sheet-control-${nextId++}`;
-
-  const control = document.createElement('div');
-  control.className = 'sheet-control';
-
-  const label = document.createElement('label');
-  label.className = nameClass(options);
-  label.htmlFor = id;
-  label.textContent = name;
-
-  const input = document.createElement('input');
-  input.className = 'stop-slider-input';
-  input.type = 'range';
-  input.id = id;
-  input.min = String(stops[0]!.value);
-  input.max = String(stops.at(-1)!.value);
-  input.step = '1';
-  input.value = String(value);
-  // A worded stop is announced by its word, not its number.
-  const valueText = () => {
-    const stop = stops.find((s) => s.value === Number(input.value));
-    if (stop && stop.label !== String(stop.value)) input.setAttribute('aria-valuetext', stop.label);
-  };
-  valueText();
-
-  // The stop labels. The slider already announces its value, so these are
-  // for the eye only — and the pointer: clicking one moves the slider there.
-  const labels = document.createElement('div');
-  labels.className = 'ui-xs stop-slider-stops';
-  labels.setAttribute('aria-hidden', 'true');
-  const ticks = document.createElement('div');
-  ticks.className = 'stop-slider-ticks';
-  stops.forEach((stop, i) => {
-    const span = document.createElement('span');
-    span.textContent = stop.label;
-    span.style.setProperty('--i', String(i));
-    span.addEventListener('click', () => {
-      if (input.disabled || Number(input.value) === stop.value) return;
-      input.value = String(stop.value);
-      // As if the slider had been dragged there.
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    labels.append(span);
-
-    const tick = document.createElement('span');
-    tick.style.setProperty('--i', String(i));
-    ticks.append(tick);
-  });
-
-  const mark = () => {
-    Array.from(labels.children).forEach((span, i) =>
-      span.classList.toggle('is-current', stops[i]!.value === Number(input.value)),
-    );
-  };
-  mark();
-
-  input.addEventListener('input', () => {
-    mark();
-    valueText();
-    onChange(Number(input.value));
-  });
-
-  const slider = document.createElement('div');
-  slider.className = options.fluid ? 'stop-slider is-fluid' : 'stop-slider';
-  slider.style.setProperty('--stops', String(stops.length));
-  slider.append(ticks, input, labels);
-
-  control.append(label, slider);
-  return control;
 }
 
 /**

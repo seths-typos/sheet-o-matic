@@ -66,7 +66,7 @@ A line the font lacks, or has out of the editor's order (an ascender on the cap 
 
 **Shelved: Save Config and Upload Config.** Left off the `frontend-overhaul` page on purpose, as likely too confusing; they come back if people ask for them. Decided 2026-11-14. That shelves reading a font's metrics from a Glyphs or UFO source too, since Upload Config is its only way in. Both are on `main`'s page, and their code stays in `web/`, unmounted: the dialog and `load` in `web/main.ts`, `web/upload-dialog.ts`, `web/import/`, `web/sheet-file.ts`. Nothing opens them. Nothing else is waiting to go back onto the page.
 
-The Preview button and the per-row previews are not coming back: the live preview replaces them. Decided 2026-11-14.
+The Preview button and the per-row previews are not coming back: the live preview replaces them. Decided 2026-11-14. Their code is gone (2026-11-15): `web/row-editor.ts`, `web/row-preview.ts`, `web/preview-dialog.ts`, the old page's panels and stop slider, and the styles for all of it. The `classic-frontend` tag keeps them.
 
 ## Tech stack
 

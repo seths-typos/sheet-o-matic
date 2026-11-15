@@ -1,7 +1,6 @@
 /**
  * Header: optional text set across the top of the printed page — on the
- * left, in the centre and on the right. An outlined block like Line Styles,
- * a line of explanation, then a text field for each place.
+ * left, in the centre and on the right. A text field for each place.
  */
 
 export interface HeaderText {
@@ -21,32 +20,6 @@ const PLACES: { key: keyof HeaderText; name: string }[] = [
 ];
 
 let nextId = 0;
-
-/** Edits `text` in place as the fields change. */
-export function createHeaderPanel(text: HeaderText): HTMLElement {
-  const panel = document.createElement('section');
-  panel.className = 'block is-outlined header-panel';
-
-  const title = document.createElement('h2');
-  title.className = 'heading-h2 block-title';
-  title.textContent = '3. Header';
-
-  const info = document.createElement('p');
-  info.className = 'body-md header-panel-info';
-  info.textContent = 'Optional text, printed across the top of the page.';
-
-  // The title on its own; the note heads the fields beside it.
-  const top = document.createElement('div');
-  top.className = 'header-panel-top';
-  top.append(title);
-
-  const body = document.createElement('div');
-  body.className = 'header-body';
-  body.append(info, createHeaderFields(text));
-
-  panel.append(top, body);
-  return panel;
-}
 
 /**
  * The three fields alone, without the panel round them: a name and a text
