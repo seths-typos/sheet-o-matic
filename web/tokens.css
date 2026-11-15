@@ -75,10 +75,11 @@
   --weight-heading: 400;
   --weight-body: 400;
   --weight-ui: 400;
-  /* Local, not yet in Figma: UI text emphasised, as on a hovered button. */
+  /* Local, not yet in Figma: a button's or toggle's text at rest. */
   --weight-ui-medium: 500;
-  /* Local, not yet in Figma: UI text chosen, as a toggle's picked option. */
-  --weight-ui-semibold: 600;
+  /* Local, not yet in Figma: that text hovered, or chosen as a toggle's
+     picked option. The face's heaviest. */
+  --weight-ui-bold: 700;
 }
 
 /* ── Color ────────────────────────────────────────────── */

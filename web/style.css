@@ -146,6 +146,8 @@ body {
   );
   color: var(--ink);
   font: inherit;
+  /* Medium at rest: regular read too light on a control. */
+  font-weight: var(--weight-ui-medium);
   text-transform: inherit;
   cursor: pointer;
 }
@@ -177,11 +179,11 @@ body {
   text-box: trim-both cap alphabetic;
 }
 
-/* Medium on hover, over the button or the name that presses it. The button
+/* Bold on hover, over the button or the name that presses it. The button
    is a fixed square, so the heavier ON/OFF moves nothing. */
 .toggle:enabled:hover > span,
 .metric-toggle:has(.metric-toggle-name:hover) .toggle:enabled > span {
-  font-weight: var(--weight-ui-medium);
+  font-weight: var(--weight-ui-bold);
 }
 
 /* On: the shape filled, reading ON. Its right corners go square only when
@@ -1173,6 +1175,8 @@ body {
     0 calc(100% - var(--cut))
   );
   font-family: var(--font-family-ui);
+  /* Medium at rest, as every button and toggle. */
+  font-weight: var(--weight-ui-medium);
   text-transform: uppercase;
 }
 
@@ -1206,7 +1210,7 @@ body {
   text-box: trim-both cap alphabetic;
 }
 
-/* Medium on hover, as the action buttons. The label set again at that
+/* Bold on hover, as the action buttons. The label set again at that
    weight, unseen and no height, in the same grid cell, keeps the option as
    wide as its heavier label, so hovering moves nothing. */
 .choice-option::after {
@@ -1215,11 +1219,11 @@ body {
   height: 0;
   overflow: hidden;
   visibility: hidden;
-  font-weight: var(--weight-ui-medium);
+  font-weight: var(--weight-ui-bold);
 }
 
 .choice-option:hover:has(input:enabled) {
-  font-weight: var(--weight-ui-medium);
+  font-weight: var(--weight-ui-bold);
 }
 
 /* The radio fills its option, invisible, so the option is the target. */
@@ -1421,7 +1425,7 @@ body {
     var(--cut) 100%,
     0 calc(100% - var(--cut))
   );
-  font: var(--weight-ui) var(--type-ui-sm) / 1 var(--font-family-ui);
+  font: var(--weight-ui-medium) var(--type-ui-sm) / 1 var(--font-family-ui);
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
@@ -1456,12 +1460,12 @@ body {
   height: 0;
   overflow: hidden;
   visibility: hidden;
-  font-weight: var(--weight-ui-medium);
+  font-weight: var(--weight-ui-bold);
 }
 
 .action-button:is(:hover, :focus-visible) {
   color: var(--label-hover);
-  font-weight: var(--weight-ui-medium);
+  font-weight: var(--weight-ui-bold);
   outline: none;
 }
 
@@ -3228,10 +3232,11 @@ body {
   transition: color var(--toggle-ease), font-weight var(--toggle-ease);
 }
 
-/* The chosen label semibold, a step past a hovered option's medium. */
+/* The chosen label bold, as a hovered one: the face goes no heavier, so
+   its colour tells the two apart. */
 .choice > .choice-option:has(input:checked) {
   color: var(--toggle-lit);
-  font-weight: var(--weight-ui-semibold);
+  font-weight: var(--weight-ui-bold);
 }
 
 /* Lamp and label on one line, never wrapped apart. The label stays trimmed
@@ -3261,10 +3266,10 @@ body {
     0 0 8px 2px rgb(from var(--toggle-lit) r g b / 0.1);
 }
 
-/* The width held for the lamp as well as the semibold label. */
+/* The width held for the lamp as well as the bold label. */
 .choice-option::after {
   padding-left: 10px;
-  font-weight: var(--weight-ui-semibold);
+  font-weight: var(--weight-ui-bold);
 }
 
 /* A square ring 3px in, in the label's colour. */
@@ -3653,7 +3658,7 @@ body {
   border: none;
   background: none;
   color: var(--ink);
-  font: var(--weight-ui) calc(32px * 0.29) / 1 var(--font-family-ui);
+  font: var(--weight-ui-medium) calc(32px * 0.29) / 1 var(--font-family-ui);
   text-transform: uppercase;
   white-space: nowrap;
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.12)) drop-shadow(2px 5px 8px rgb(0 0 0 / 0.2));

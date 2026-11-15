@@ -488,6 +488,12 @@ function shiftSheet(): void {
       const room = sheetBox.getBoundingClientRect().top - moved.y - stage.getBoundingClientRect().top;
       y = -Math.max(0, Math.min(room, over));
     }
+    // Onto whole pixels, where it rests: centred, the sheet can sit on a
+    // half pixel, and Safari sets the type of anything moved off the
+    // pixel grid soft on a screen of one pixel to the point.
+    const at = sheetBox.getBoundingClientRect();
+    x = snapped(at.left - moved.x, x);
+    y = snapped(at.top - moved.y, y);
   }
   const to = x === 0 && y === 0 ? '' : `${x}px ${y}px`;
   const cards = `${editing !== null}|${sideOpen}`;
@@ -501,6 +507,11 @@ function shiftSheet(): void {
     sheetBox.getBoundingClientRect();
     sheetBox.style.transition = '';
   }
+}
+
+/** A shift from `from` nudged to end on a whole pixel. */
+function snapped(from: number, shift: number): number {
+  return Math.round((Math.round(from + shift) - from) * 1000) / 1000;
 }
 
 /**
@@ -517,7 +528,8 @@ function placeCard(): void {
   const highest = bounds.top - slot.top;
   const lowest = bounds.bottom - slot.top - height;
   const centred = parseFloat(edit.style.top) - height / 2;
-  card.style.top = `${Math.max(highest, Math.min(lowest, centred))}px`;
+  // A whole pixel, as the sheet is: Safari blurs type set between them.
+  card.style.top = `${Math.round(Math.max(highest, Math.min(lowest, centred)))}px`;
   // Its right edge at rest, from the window's left, and a little more for
   // its shadow.
   // Measured with the sheet in the middle, where the card comes and goes.
@@ -634,7 +646,8 @@ function placeRowEdits(content: PreviewSheet): void {
       }
       edit.disabled = disabled;
     }
-    edit.style.top = `${((row.top + row.bottom) / 2) * scale}px`;
+    // A whole pixel: Safari blurs type set between them.
+    edit.style.top = `${Math.round(((row.top + row.bottom) / 2) * scale)}px`;
   });
   markRowEdits();
   // How wide a button is reading Edit Row: its width now, with its words'
