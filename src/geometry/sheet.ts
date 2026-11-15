@@ -1,3 +1,4 @@
+import { LayoutError } from './errors.js';
 import type { SheetConfig } from '../config/types.js';
 import type { HeaderBlock, Rect, Sheet } from './types.js';
 import { fitRowCount, solveCapHeight, totalMetricHeight } from './metrics.js';
@@ -55,7 +56,7 @@ function availableArea(config: SheetConfig, page: { width: number; height: numbe
   const height = bottom - top;
 
   if (!(width > 0) || !(height > 0)) {
-    throw new Error(
+    throw new LayoutError(
       `Margins${headerHeight ? ' and header' : ''} leave no room on a ` +
         `${page.width} x ${page.height} pt page (got ${width} x ${height} pt).`,
     );
@@ -100,7 +101,7 @@ function resolveLayout(config: SheetConfig, area: Rect): RowLayout {
       : fitRowCount(area.height, height, metrics.rowGap);
 
   if (rowCount < 1) {
-    throw new Error(
+    throw new LayoutError(
       `No rows fit: one row is ${round(height)} pt tall but only ` +
         `${round(area.height)} pt is available.`,
     );

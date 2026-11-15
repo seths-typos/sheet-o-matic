@@ -1,4 +1,5 @@
 export { buildSheet } from './sheet.js';
+export { LayoutError } from './errors.js';
 export {
   bandExtremes,
   fitRowCount,

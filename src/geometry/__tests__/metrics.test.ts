@@ -1,3 +1,4 @@
+import { LayoutError } from '../errors.js';
 import { describe, expect, it } from 'vitest';
 import {
   fitRowCount,
@@ -97,6 +98,8 @@ describe('solveCapHeight', () => {
 
   it('rejects a row count that cannot fit', () => {
     expect(() => solveCapHeight(100, 5, 36, METRICS)).toThrow(/do not fit/);
+    // Told apart from a bug: a caller with a form shows it as "no room".
+    expect(() => solveCapHeight(100, 5, 36, METRICS)).toThrow(LayoutError);
   });
 
   it('rejects a non-integer or zero row count', () => {

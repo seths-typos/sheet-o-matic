@@ -2,7 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { buildSheet } from '../../../geometry/index.js';
 import { baseConfig } from '../../../testing/fixtures.js';
-import { renderSheetPdf } from '../index.js';
+import { DEFAULT_HEADER_TEXT_STYLE, renderSheetPdf } from '../index.js';
 import { createSheetPdf } from '../../../index.js';
 import { contentStream, strokeCount, textShown } from '../../../testing/pdf.js';
 
@@ -133,6 +133,67 @@ describe('renderSheetPdf — labels', () => {
 
     expect(Math.max(...xs)).toBeLessThan(30);
     expect(Math.min(...xs)).toBeGreaterThan(0);
+  });
+});
+
+describe('renderSheetPdf — text Helvetica cannot set', () => {
+  // A 1 x 1 transparent PNG.
+  const PNG = Uint8Array.from(
+    atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='),
+    (c) => c.charCodeAt(0),
+  );
+  const image = { png: PNG, width: 40, height: 14, inset: 2, ascent: 10, advance: 36 };
+
+  const withHeader = (left: string) => {
+    const config = baseConfig();
+    config.header.enabled = true;
+    config.header.left = left;
+    // The header's is the only text.
+    config.labels.enabled = false;
+    return config;
+  };
+
+  it('throws without a way to draw it', async () => {
+    const config = withHeader('Tiếng Việt →');
+
+    await expect(renderSheetPdf(buildSheet(config), config)).rejects.toThrow(/cannot encode/);
+  });
+
+  it('places the caller\'s picture of the line instead', async () => {
+    const config = withHeader('Tiếng Việt →');
+    const asked: string[] = [];
+
+    const bytes = await renderSheetPdf(buildSheet(config), config, {}, (op) => {
+      asked.push(op.text);
+      return image;
+    });
+    const content = await contentStream(bytes);
+
+    expect(asked).toEqual(['Tiếng Việt →']);
+    // The picture, 40 x 14 pt, its left edge the inset left of the margin:
+    // Moved to its bottom-left corner, then scaled to its size. The corner
+    // is the inset left of the margin, and as far under the baseline as
+    // the picture runs below it: 14 - 10 pt.
+    const [, x, y] = content.match(/1 0 0 1 ([\d.]+) ([\d.]+) cm\n1 0 0 1 0 0 cm\n40 0 0 14 0 0 cm/) ?? [];
+    const baseline = config.page.height - (config.page.margins.top + DEFAULT_HEADER_TEXT_STYLE.size);
+    expect(Number(x)).toBeCloseTo(config.page.margins.left - 2, 6);
+    expect(Number(y)).toBeCloseTo(baseline - 4, 6);
+    expect(content).toMatch(/\/Image-\d+ Do/);
+    // And not as text.
+    expect(textShown(content)).toEqual([]);
+  });
+
+  it('leaves a line Helvetica can set to Helvetica', async () => {
+    const config = withHeader('Café — “brief”');
+    let asked = 0;
+
+    const bytes = await renderSheetPdf(buildSheet(config), config, {}, () => {
+      asked++;
+      return image;
+    });
+
+    expect(asked).toBe(0);
+    expect(textShown(await contentStream(bytes)).length).toBe(1);
   });
 });
 

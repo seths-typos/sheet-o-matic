@@ -1,6 +1,7 @@
 import { renderSheetPdf } from '../src/index.js';
 import { sheetToSvg } from '../src/render/svg/index.js';
 import type { PageSetup, PreviewSheet } from './sheet-preview.js';
+import { textImage } from './text-image.js';
 
 /** Each paper as CSS names it in `@page { size }`. */
 const PAPER_KEYWORD: Record<PageSetup['size'], string> = { letter: 'letter', a4: 'A4' };
@@ -26,9 +27,9 @@ const PRINTS_ITS_OWN_WAY =
  * PDF instead, to print from there: a PDF carries its own page size and
  * orientation, which the browser's PDF viewer keeps to.
  */
-export function printSheet(content: PreviewSheet): void {
+export async function printSheet(content: PreviewSheet): Promise<void> {
   if (PRINTS_ITS_OWN_WAY) {
-    void openSheetPdf(content);
+    await openSheetPdf(content);
     return;
   }
   const { sheet, config, options, fontFamily, page: setup } = content;
@@ -55,9 +56,13 @@ export function printSheet(content: PreviewSheet): void {
   window.print();
 }
 
-/** The sheet as a PDF, at a URL good until it is let go. */
-async function sheetPdfUrl({ sheet, config, options }: PreviewSheet): Promise<string> {
-  const bytes = await renderSheetPdf(sheet, config, options);
+/**
+ * The sheet as a PDF, at a URL good until it is let go. Header text the
+ * PDF's Helvetica can't set goes in as a picture of it, drawn here with the
+ * browser's fonts, so a header in any language saves.
+ */
+async function sheetPdfUrl({ sheet, config, options, fontFamily }: PreviewSheet): Promise<string> {
+  const bytes = await renderSheetPdf(sheet, config, options, (op) => textImage(op, fontFamily));
   return URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
 }
 
@@ -73,7 +78,14 @@ async function openSheetPdf(content: PreviewSheet): Promise<void> {
     await saveSheetPdf(content);
     return;
   }
-  const url = await sheetPdfUrl(content);
+  let url: string;
+  try {
+    url = await sheetPdfUrl(content);
+  } catch (error) {
+    // No PDF to send it to: an empty tab left open would say nothing.
+    tab.close();
+    throw error;
+  }
   tab.location.href = url;
   // Long enough for the tab to have loaded it.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);

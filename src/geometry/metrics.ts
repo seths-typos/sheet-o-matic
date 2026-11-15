@@ -1,3 +1,4 @@
+import { LayoutError } from './errors.js';
 import type { MetricsConfig } from '../config/types.js';
 import type { MetricLine } from './types.js';
 
@@ -107,7 +108,7 @@ export function solveCapHeight(
   const capHeight = heightForRows / (rowCount * ratio);
 
   if (!(capHeight > 0)) {
-    throw new Error(
+    throw new LayoutError(
       `${rowCount} rows with a ${rowGap} pt gap do not fit in ${availableHeight} pt.`,
     );
   }

@@ -3,7 +3,7 @@ import { emptyHeaderText } from './header-panel.js';
 import { mastersAgree, type FontMaster } from './import/font-source.js';
 import { applyFontMetrics, readUpload } from './import/read-upload.js';
 import { defaultLineStyles } from './line-styles.js';
-import { ConfigError } from '../src/index.js';
+import { ConfigError, LayoutError } from '../src/index.js';
 import type { LabelText } from '../src/render/ops.js';
 import { createLineCard } from './line-card.js';
 import { printSheet, saveSheetPdf } from './output.js';
@@ -60,8 +60,10 @@ function sheetContent(room?: number): PreviewSheet | { message: string } {
   try {
     return previewSheet(inputs, sheet.header, sheet.page, values, room);
   } catch (error) {
-    // The one page-wide value that can leave no room: the margin.
-    if (!(error instanceof ConfigError)) throw error;
+    // The one page-wide value that can leave no room: the margin. Too big
+    // for the page, config refuses it; too big for this many rows, their
+    // layout does.
+    if (!(error instanceof ConfigError || error instanceof LayoutError)) throw error;
     return { message: 'The margin leaves no room for the rows. Try a smaller one.' };
   }
 }
@@ -112,9 +114,13 @@ stage.append(sheetBox);
 const frame = document.createElement('div');
 frame.className = 'workspace-paper';
 const paper = document.createElement('canvas');
+// A picture of the sheet, named as it is drawn.
+paper.setAttribute('role', 'img');
 frame.append(paper);
 const message = document.createElement('p');
 message.className = 'body-md workspace-preview-message';
+// Read out when it changes: what's wrong is said nowhere else.
+message.setAttribute('role', 'status');
 /** Left of the paper, outside it: an Edit button level with each row. */
 const rowEdits = document.createElement('div');
 rowEdits.className = 'workspace-row-edits';
@@ -202,10 +208,21 @@ function actionFloatButton(d: string, words: string, run: () => void): HTMLButto
   return button;
 }
 
-/** Run `action` on the sheet, if it can be made; if not, the paper already says why. */
+/**
+ * Run `action` on the sheet, if it can be made; if not, the paper already
+ * says why. An action that fails says so over the paper, until the sheet is
+ * next drawn, rather than do nothing.
+ */
 const withSheet = (action: (content: PreviewSheet) => unknown) => () => {
   const content = sheetContent();
-  if (!('message' in content)) void action(content);
+  if ('message' in content) return;
+  Promise.resolve()
+    .then(() => action(content))
+    .catch((error: unknown) => {
+      console.error(error);
+      message.textContent = "That didn't work. Try again.";
+      if (frame.parentElement === sheetBox) frame.append(message);
+    });
 };
 
 /**
@@ -362,6 +379,10 @@ for (const [which, button] of Object.entries(SIDE_BUTTONS) as [SideCard, HTMLBut
   button.addEventListener('click', () => {
     if (sideOpen === which) closeSide();
     else openSide(which);
+  });
+  // Escape closes its card from the button too, not only from inside it.
+  button.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && sideOpen === which) closeSide();
   });
 }
 
@@ -603,9 +624,19 @@ function createRowEdit(index: number): HTMLButtonElement {
   // A pencil and Edit Row, or an X and Close while its card is open.
   const edit = floatButton(PENCIL, 'Edit row');
   edit.classList.add('workspace-row-edit');
-  edit.addEventListener('click', () => {
-    if (editing === index) closeRow();
-    else openRow(index);
+  edit.addEventListener('click', (event) => {
+    if (editing === index) {
+      closeRow();
+      return;
+    }
+    openRow(index);
+    // Opened from the keyboard, focus goes into the card: it comes after
+    // every row's button in the page's order, a long way to tab.
+    if (event.detail === 0) card.querySelector<HTMLElement>('button, input')?.focus({ preventScroll: true });
+  });
+  // Escape closes its card from the button too, not only from inside it.
+  edit.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && editing === index) closeRow();
   });
   // The rise over, hover answers at once again.
   edit.addEventListener('animationend', () => edit.classList.remove('is-rising'));
@@ -613,29 +644,46 @@ function createRowEdit(index: number): HTMLButtonElement {
 }
 
 /**
- * An Edit button for each row drawn, centred on its band at the paper's
- * scale. With shared metrics only row 1's is active: the rest follow it.
- * The buttons are kept and updated in place, so one switched on rises off
- * the mat and one switched off lands on it, each a moment after the one
- * above it.
+ * Where each row's Edit button goes, down the paper, in px: the middle of
+ * its band on the sheet drawn. That sheet is the last good one while a
+ * value is being fixed, and may have another number of rows; then the
+ * buttons are spread evenly, near enough to where the rows will be.
  */
-function placeRowEdits(content: PreviewSheet): void {
-  const { sheet: drawn } = content;
-  const scale = parseFloat(paper.style.width) / drawn.page.width;
+function rowCentres({ sheet: drawn }: PreviewSheet): number[] {
+  if (drawn.rows.length === sheet.rowCount) {
+    const scale = parseFloat(paper.style.width) / drawn.page.width;
+    return drawn.rows.map((row) => ((row.top + row.bottom) / 2) * scale);
+  }
+  const height = parseFloat(paper.style.height);
+  return Array.from({ length: sheet.rowCount }, (_, i) => (height * (i + 0.5)) / sheet.rowCount);
+}
+
+/**
+ * An Edit button for each of the sheet's rows, centred on its band at the
+ * paper's scale. With shared metrics only row 1's is active: the rest follow
+ * it. The buttons are kept and updated in place, so one switched on rises
+ * off the mat and one switched off lands on it, each a moment after the one
+ * above it.
+ *
+ * From the sheet as the page holds it, not as it was last drawn: a row
+ * whose value stops the sheet being drawn still needs its button, to be
+ * fixed with.
+ */
+function placeRowEdits(centres: number[]): void {
   const edits = Array.from(rowEdits.children) as HTMLButtonElement[];
-  for (const edit of edits.splice(drawn.rows.length)) edit.remove();
+  for (const edit of edits.splice(centres.length)) edit.remove();
   // A row no longer there, or now following row 1, has nothing to edit.
-  if (editing !== null && (editing >= drawn.rows.length || (sheet.metrics === 'same' && editing > 0))) {
+  if (editing !== null && (editing >= centres.length || (sheet.metrics === 'same' && editing > 0))) {
     closeRow();
   }
 
   // How many have started moving this redraw: each waits its turn.
   let moving = 0;
-  drawn.rows.forEach((row, i) => {
+  centres.forEach((centre, i) => {
     let edit = edits[i];
-    const disabled = sheet.metrics === 'same' && row.index > 0;
+    const disabled = sheet.metrics === 'same' && i > 0;
     if (!edit) {
-      edit = createRowEdit(row.index);
+      edit = createRowEdit(i);
       edit.disabled = disabled;
       rowEdits.append(edit);
     } else if (edit.disabled !== disabled) {
@@ -647,7 +695,7 @@ function placeRowEdits(content: PreviewSheet): void {
       edit.disabled = disabled;
     }
     // A whole pixel: Safari blurs type set between them.
-    edit.style.top = `${Math.round(((row.top + row.bottom) / 2) * scale)}px`;
+    edit.style.top = `${Math.round(centre)}px`;
   });
   markRowEdits();
   // How wide a button is reading Edit Row: its width now, with its words'
@@ -686,17 +734,16 @@ let reshapes = 0;
  */
 function redraw(animate = false): void {
   moveValuesRoom();
-  const content = sheetContent(valuesRoom);
-  if ('message' in content) {
-    message.textContent = content.message;
-    // A value being fixed in a card: the last good sheet stays, faded, so
-    // it can't be mistaken for the values now in the fields, with what's
-    // wrong said over it.
-    if (frame.parentElement === sheetBox) {
-      frame.classList.add('is-stale');
-      frame.append(message);
-      return;
-    }
+  const fresh = sheetContent(valuesRoom);
+  if (!('message' in fresh)) lastGood = fresh;
+  // A value being fixed in a card: the last good sheet stays, faded, so it
+  // can't be mistaken for the values now in the fields, with what's wrong
+  // said over it. It is still fitted to the window and its rows still have
+  // their buttons.
+  const content = lastGood;
+  if (!content) {
+    // Never yet drawn: only what's wrong.
+    if ('message' in fresh) message.textContent = fresh.message;
     sheetBox.replaceChildren(sheetBar, message, pageTools);
     return;
   }
@@ -714,9 +761,21 @@ function redraw(animate = false): void {
   // Narrowed to a compact window with both cards open: the side's stays.
   if (COMPACT.matches && editing !== null && sideOpen !== null) closeRow();
   drawSheetFitted(paper, { width: fitWidth(), height: stage.clientHeight - around }, content, white);
-  frame.classList.remove('is-stale');
-  if (message.parentElement === frame) message.remove();
-  placeRowEdits(content);
+  if ('message' in fresh) {
+    frame.classList.add('is-stale');
+    message.textContent = fresh.message;
+    frame.append(message);
+  } else {
+    frame.classList.remove('is-stale');
+    if (message.parentElement === frame) message.remove();
+  }
+  const { size, orientation } = content.page;
+  const rows = content.sheet.rows.length;
+  paper.setAttribute(
+    'aria-label',
+    `Preview of the sheet: ${rows} ${rows === 1 ? 'row' : 'rows'}, ${size === 'a4' ? 'A4' : 'Letter'}, ${orientation}`,
+  );
+  placeRowEdits(rowCentres(content));
   // Its words' cell again, in case the web fonts have since loaded.
   markSideButtons();
 
@@ -757,6 +816,9 @@ function redraw(animate = false): void {
 /** Set while the paper is fitted a second time, so not a third. */
 let refitting = false;
 
+/** The sheet as it last could be drawn. */
+let lastGood: PreviewSheet | null = null;
+
 /**
  * How much of the metric values' room the drawn sheet holds, 0 to 1, and
  * where it is headed: all of it with the values shown, none without.
@@ -784,8 +846,12 @@ function moveValuesRoom(): void {
   const step = (now: number) => {
     // Switched back since: that move has taken over.
     if (valuesRoomTo !== to) return;
-    const time = Math.min(1, (now - began) / length);
-    valuesRoom = time === 1 ? to : from + (to - from) * slideProgressAt(time);
+    // A frame can be stamped before the move began.
+    const time = Math.max(0, Math.min(1, (now - began) / length));
+    // Not under none: the easing runs a little past its end, and less
+    // room than none would be a margin under the page's, which at a margin
+    // of 0 is no sheet at all.
+    valuesRoom = time === 1 ? to : Math.max(0, from + (to - from) * slideProgressAt(time));
     redraw();
     if (time < 1) requestAnimationFrame(step);
   };

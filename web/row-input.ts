@@ -49,14 +49,15 @@ export function rowInput(
   styles: LineStyles,
   errors: Map<string, string> = new Map(),
 ): SheetInput | null {
-  for (const [key, value] of Object.entries(state.units)) {
+  const typed = standingIn(state);
+  for (const [key, value] of Object.entries(typed)) {
     if (value === null) errors.set(`metrics.${key}`, 'Enter a number.');
   }
   const slantTyped = !state.slant.enabled || state.slant.angle !== null;
   if (!slantTyped) errors.set('slant.angle', 'Enter a number.');
   if ([...errors.keys()].some((path) => path.startsWith('metrics.'))) return null;
 
-  const units = state.units as FontUnitMetrics;
+  const units = typed as FontUnitMetrics;
   // Everything else is measured against the cap height, so config can't
   // judge the others until it is usable.
   if (!(units.capHeight > 0)) {
@@ -112,6 +113,30 @@ export function rowInput(
     }
     return null;
   }
+}
+
+/**
+ * A metric switched off isn't checked: its field is shut, so there is
+ * nowhere to say what's wrong with it, or to fix it. One with a value
+ * config would take keeps it, and still sizes the row as it did when
+ * drawn. One without — not a number, or on the wrong side of the baseline
+ * — stands in a value that changes nothing: the ascender and x-height on
+ * the cap height, the descender on the baseline.
+ *
+ * Not the cap height. Every other metric is measured against it, so it has
+ * to be good whether or not its line is drawn.
+ */
+function standingIn(state: RowState): RowState['units'] {
+  const units = { ...state.units };
+  const cap = units.capHeight ?? 0;
+  const stand = (key: 'ascender' | 'xHeight' | 'descender', good: (value: number) => boolean, to: number) => {
+    const value = units[key];
+    if (!state.visible[key] && (value === null || !good(value))) units[key] = to;
+  };
+  stand('ascender', (value) => value >= 0, cap);
+  stand('xHeight', (value) => value > 0, cap);
+  stand('descender', (value) => value <= 0, 0);
+  return units;
 }
 
 /**

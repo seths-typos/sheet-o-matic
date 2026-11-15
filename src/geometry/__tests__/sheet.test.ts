@@ -1,3 +1,4 @@
+import { LayoutError } from '../errors.js';
 import { describe, expect, it } from 'vitest';
 import { buildSheet } from '../sheet.js';
 import type { LineType } from '../types.js';
@@ -49,6 +50,7 @@ describe('buildSheet — available area', () => {
     config.page.margins = { top: 400, right: 36, bottom: 400, left: 36 };
 
     expect(() => buildSheet(config)).toThrow(/no room/);
+    expect(() => buildSheet(config)).toThrow(LayoutError);
   });
 
   it('rejects a page with no dimensions', () => {

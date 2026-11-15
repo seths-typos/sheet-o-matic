@@ -5,7 +5,8 @@ let nextId = 0;
 
 /** The value field a toggle slides out when it is on. */
 export interface MetricField {
-  value: number;
+  /** Null is a field left without a number: it starts empty. */
+  value: number | null;
   /** Shown in the cap at the field's right end. */
   unit: string;
 }
@@ -91,7 +92,7 @@ export function createMetricToggle(options: MetricToggleOptions): MetricToggle {
     input.className = 'metric-input';
     input.type = 'text';
     input.inputMode = 'decimal';
-    input.value = String(field.value);
+    input.value = field.value === null ? '' : String(field.value);
     input.setAttribute('aria-label', `${name} (${field.unit})`);
     input.addEventListener('input', () => {
       const text = input!.value.trim();

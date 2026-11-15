@@ -56,7 +56,9 @@ export function createRowCard(options: RowCardOptions): HTMLElement {
     const toggle = createMetricToggle({
       name,
       on: state.visible[type],
-      field: { ...field, value: state.units[type as keyof FontUnitMetrics] ?? field.value },
+      // As the row holds it: a field cleared and not yet filled comes back
+      // empty, not as a default the row doesn't have.
+      field: { ...field, value: state.units[type as keyof FontUnitMetrics] },
       onToggle(on) {
         state.visible[type] = on;
         changed();
@@ -73,7 +75,7 @@ export function createRowCard(options: RowCardOptions): HTMLElement {
   const italic = createMetricToggle({
     name: 'Italic angle',
     on: state.slant.enabled,
-    field: { value: state.slant.angle ?? 30, unit: 'Deg' },
+    field: { value: state.slant.angle, unit: 'Deg' },
     onToggle(on) {
       state.slant.enabled = on;
       changed();
