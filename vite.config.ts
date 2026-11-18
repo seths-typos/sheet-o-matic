@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 export default defineConfig(({ command }) => ({
   // The build is published on GitHub Pages under the repo's name; see
   // .github/workflows/deploy.yml. The dev server stays at the root.
-  base: command === 'build' ? '/type-template/' : '/',
+  base: command === 'build' ? '/sheet-o-matic/' : '/',
   plugins: [
     {
       name: 'draft-trailing-slash',

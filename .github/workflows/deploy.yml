@@ -1,5 +1,5 @@
 # Publishes the app to GitHub Pages on every push to main:
-# https://seths-typos.github.io/type-template/
+# https://seths-typos.github.io/sheet-o-matic/
 name: Deploy to GitHub Pages
 
 on:
